@@ -84,8 +84,7 @@ jobs:
         run: |
           set -o pipefail
           if supabase start 2>&1 | tee /tmp/start.log; then exit 0; fi
-          grep -E 'ERROR|error:|failed|Failed|permission denied|already exists|does not exist|Applying migration' /tmp/start.log \
-            | tail -30 | while IFS= read -r line; do echo "::error::$line"; done
+          tail -40 /tmp/start.log | while IFS= read -r line; do echo "::error::$line"; done
           exit 1
       - name: Apply migrations + seed
         run: |

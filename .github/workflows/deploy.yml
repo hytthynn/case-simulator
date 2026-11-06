@@ -1,0 +1,64 @@
+name: Deploy (staging / prod)
+
+# Реальный деплой требует закрытых Q-01/Q-02 (BOT_TOKEN, домены, доступы).
+# Workflow намеренно не выполняет сетевых шагов без секретов.
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'staging | prod'
+        required: true
+        default: 'staging'
+  push:
+    branches: [main]
+
+jobs:
+  predeploy:
+    runs-on: ubuntu-latest
+    outputs:
+      ready: ${{ steps.check.outputs.ready }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: check
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          if [ -n "$RAILWAY_TOKEN" ] && [ -n "$SUPABASE_ACCESS_TOKEN" ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Q-01/Q-02 не закрыты: деплой пропущен, CI и docs-lint выполнены"
+          fi
+
+  deploy:
+    needs: predeploy
+    if: needs.predeploy.outputs.ready == 'true'
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment || 'staging' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.34.9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint && pnpm typecheck && pnpm test && pnpm docs:lint
+      # Миграции — в pre-deploy, НЕ в build-фазе (private network недоступна при сборке).
+      - name: Supabase migrations
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+        run: supabase link --project-ref "$SUPABASE_PROJECT_ID" && supabase db push
+      - name: Build SPA
+        run: pnpm --filter @case-sim/web build
+      # Railway и Cloudflare деплоятся собственными GitHub-интеграциями (Wait for CI).
+      - name: Smoke check
+        run: echo "Deploy delegated to Railway/Cloudflare integrations; see docs/10-ops-deploy.md"

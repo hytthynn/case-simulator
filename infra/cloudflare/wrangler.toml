@@ -1,0 +1,13 @@
+name = "case-sim-web"
+compatibility_date = "2026-11-06"
+
+# Cloudflare Pages: SPA собирается `pnpm --filter @case-sim/web build`,
+# артефакт apps/web/dist, заголовки CSP — infra/cloudflare/_headers.
+[build]
+command = "pnpm install --frozen-lockfile && pnpm --filter @case-sim/web build"
+
+[env.staging]
+name = "case-sim-web-staging"
+
+[env.production]
+name = "case-sim-web"

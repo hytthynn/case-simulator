@@ -1,0 +1,11 @@
+# Railway · apps/bot. Слушаем 0.0.0.0:$PORT, region europe-west4-drams3a задаётся в UI.
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "infra/railway/Dockerfile"
+watchPatterns = ["apps/bot/**", "packages/shared/**", "pnpm-lock.yaml"]
+
+[deploy]
+healthcheckPath = "/health"
+healthcheckTimeout = 30
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 5

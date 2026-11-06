@@ -1,0 +1,20 @@
+name: docs-lint
+
+on:
+  pull_request:
+    paths: ['docs/**', 'AGENTS.md', 'README.md', 'package.json', 'infra/scripts/**']
+  push:
+    branches: [main]
+
+jobs:
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Ссылки, лимит AGENTS.md, changelog, security-инварианты
+        run: node infra/scripts/docs-lint.mjs
+      - name: Проверка миграций и сида
+        run: node infra/scripts/verify-seed.mjs

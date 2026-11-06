@@ -1,0 +1,77 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.34.9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint + typecheck
+        run: pnpm lint && pnpm typecheck
+
+      - name: Unit tests (RNG, auth, XTR, contracts)
+        run: pnpm test
+
+      - name: Generate seed snapshot (D-04)
+        run: pnpm db:seed:generate
+
+      - name: Migration / seed static checks
+        run: pnpm --filter @case-sim/db test
+
+      - name: Docs lint
+        run: pnpm docs:lint
+
+      - name: Build (web SPA + bot bundle)
+        run: pnpm build
+
+      - name: No secrets in client bundle
+        run: |
+          if grep -RIlE 'BOT_TOKEN|sb_secret_|service_role|SUPABASE_JWT_JWK' apps/web/dist; then
+            echo "::error::secret leaked into client bundle"; exit 1;
+          fi
+
+      - name: Dependency audit
+        run: pnpm audit --audit-level=high || true
+
+  database:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.34.9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm db:seed:generate
+      - name: Postgres migrations + pgTAP (RLS, idempotency)
+        run: |
+          supabase start
+          supabase db reset
+          supabase test db

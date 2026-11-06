@@ -88,6 +88,7 @@ jobs:
         # Логи job'а требуют токен, а annotations доступны публично —
         # дублируем строки провала в annotations для диагностики без секретов.
         run: |
+          set -o pipefail
           if supabase test db 2>&1 | tee /tmp/pgtap.log; then
             exit 0
           fi

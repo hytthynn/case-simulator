@@ -48,6 +48,29 @@ supabase gen signing-key --algorithm ES256
 
 **Секреты:** если токен бота, `sb_secret_…` или JWK где-то засветились (скриншот, чат, коммит) — немедленно перевыпустить: для бота @BotFather → `/revoke`, для Supabase — ротация ключей. `.env.example` содержит только пустые значения, `pnpm env:check` маскирует значения при проверке.
 
+### 2.1 Storage: бакет `catalog`
+
+Бакет **создаётся миграцией `0012_storage.sql`** — руками в Dashboard делать ничего не надо, `supabase db push` создаст его сам (идемпотентно, `ON CONFLICT`). Что делает миграция: `storage.buckets(id='catalog', public=true)`, лимит 50 MiB, `image/png|webp|avif|jpeg`, политика `catalog_public_read` на `storage.objects` (публичное чтение). Запись возможна только с `SUPABASE_SECRET_KEY` (service_role).
+
+Схема URL — важно не перепутать префиксы:
+
+| Что | Значение |
+|---|---|
+| `image_url` в БД | `catalog/cases/<name>.png`, `catalog/items/<name>.png` |
+| Ключ объекта **внутри** бакета | `cases/<name>.png`, `items/<name>.png` (**без** `catalog/`) |
+| `VITE_CDN_BASE_URL` | `https://<ref>.supabase.co/storage/v1/object/public` |
+| Итоговый URL | `https://<ref>.supabase.co/storage/v1/object/public/catalog/cases/<name>.png` |
+
+Загрузка ассетов (после распаковки APK/CDN в `assets/catalog/`, папка в `.gitignore`):
+
+```bash
+pnpm assets:upload --dry-run     # проверить список без сети
+pnpm assets:upload               # залить, x-upsert + immutable Cache-Control
+pnpm assets:verify               # сверить с docs/reference/asset-manifest.txt
+```
+
+> ⚠️ ~15 000 изображений и 62 звука **ещё не выгружены** (Q-12) и требуют юр. проверки D-03/R-01 (Q-03). Первый деплой корректно работает с заглушками ◈: бакет можно создать заранее, наполнить позже — код и БД от этого не меняются.
+
 ---
 
 ## 3. Railway
@@ -147,7 +170,7 @@ Content-Security-Policy: ... connect-src 'self' {{API_ORIGIN}} {{SUPABASE_ORIGIN
 - `index.html`: `<script src="https://telegram.org/js/telegram-web-app.js?64"></script>` **в `<head>` до остальных скриптов**.
 - **Вебхук бота** ставится командой `pnpm bot:webhook:set` ([`infra/scripts/set-webhook.mjs`](../infra/scripts/set-webhook.mjs)): читает `.env`, передаёт `secret_token` и `allowed_updates`, поддерживает `TELEGRAM_USE_TEST_ENV=true` (`/test/setWebhook`). Проверка — `pnpm bot:webhook:info`, снятие — `pnpm bot:webhook:delete`. URL обязан заканчиваться на `/telegram/webhook`.
 - Для скачиваний: `Content-Disposition: attachment` + `Access-Control-Allow-Origin: https://web.telegram.org`.
-- Ассеты каталога: Supabase Storage + CDN; `infra/scripts/verify-assets.ts` проверяет 404 по всему каталогу.
+- Ассеты каталога: Supabase Storage (бакет `catalog`) + CDN; `pnpm assets:upload` заливает `assets/catalog/`, `pnpm assets:verify` сверяет с `docs/reference/asset-manifest.txt`. См. §2.1.
 
 ---
 

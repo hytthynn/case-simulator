@@ -18,6 +18,7 @@
     "docs:lint": "node infra/scripts/docs-lint.mjs",
     "db:seed:generate": "node infra/scripts/import-prices.mjs",
     "assets:verify": "node infra/scripts/verify-assets.mjs",
+    "assets:upload": "node infra/scripts/upload-assets.mjs",
     "bot:webhook:set": "node infra/scripts/set-webhook.mjs set",
     "bot:webhook:info": "node infra/scripts/set-webhook.mjs info",
     "bot:webhook:delete": "node infra/scripts/set-webhook.mjs delete",

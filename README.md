@@ -136,12 +136,35 @@ pnpm dlx supabase gen signing-key --algorithm ES256
 ```bash
 pnpm dlx supabase start              # нужен Docker
 pnpm db:seed:generate                # 14 945 предметов, 241 кейс, 46 флагов из docs/reference/
-pnpm dlx supabase db reset           # 11 миграций + supabase/seed.sql + seed-data.sql
+pnpm dlx supabase db reset           # 12 миграций + supabase/seed.sql + seed-data.sql
 pnpm dlx supabase test db            # pgTAP: RLS и идемпотентность
 pnpm --filter @case-sim/db types     # сгенерировать packages/db/src/database.types.ts
 ```
 
 Пути миграций и сида заданы в `supabase/config.toml`. Сгенерированный `supabase/seed-data.sql` (~4.9 MB) в git не коммитится.
+
+### Шаг 3.1 · Storage в Supabase
+
+**Бакет создавать руками не нужно** — миграция `0012_storage.sql` делает это при `supabase db push` / `db reset`: `storage.buckets(id='catalog', public=true)`, лимит 50 MiB, `image/png|webp|avif|jpeg`, политика `catalog_public_read` на чтение. Запись — только с `SUPABASE_SECRET_KEY`. Проверить: Supabase Dashboard → **Storage** → бакет `catalog`.
+
+Если хотите создать вручную (или проект уже создан до миграции): **Storage → New bucket → Name `catalog` → Public bucket = ON → File size limit 50 MB → Allowed MIME `image/png, image/webp, image/avif, image/jpeg`**, затем в **Policies** добавьте `SELECT` для `public` с `bucket_id = 'catalog'`.
+
+Схема URL (не путайте префиксы):
+
+| | |
+|---|---|
+| `image_url` в БД | `catalog/cases/<name>.png` |
+| ключ объекта **внутри** бакета | `cases/<name>.png` — **без** `catalog/` |
+| `VITE_CDN_BASE_URL` | `https://<ref>.supabase.co/storage/v1/object/public` |
+| итоговый URL | `.../public/catalog/cases/<name>.png` |
+
+```bash
+pnpm assets:upload --dry-run    # что загрузится, без сети
+pnpm assets:upload              # из assets/catalog/ в бакет (x-upsert + immutable cache)
+pnpm assets:verify              # сверка с docs/reference/asset-manifest.txt
+```
+
+> ⚠️ ~15 000 изображений и 62 звука **пока не выгружены** (Q-12) и требуют юр. проверки D-03/R-01 (Q-03). Первый деплой можно спокойно проводить с заглушками ◈ — бакет создаётся заранее, наполняется позже, код и БД не меняются.
 
 ### Шаг 4 · Telegram-бот (@BotFather)
 
@@ -185,7 +208,7 @@ pnpm deploy:check
 1. Создать Supabase project (Pro, EU), `supabase gen signing-key --algorithm ES256` → JWK с `kid` в секреты.
 2. В BotFather задать команды и Main Mini App на `https://app.<domain>`, включить Stars/2FA.
 3. Запустить `deploy.yml` → **Actions → Run workflow → `seed_catalog=true`**. Это важно: `supabase db push` применяет только миграции, а каталог (14 945 предметов, 241 кейс, SKU, флаги) грузится отдельным шагом `psql -f supabase/seed.sql`. Повторять не обязательно.
-4. Workflow: `deploy:check` → CI-гейт → миграции → сид → сборка SPA → Pages → ожидание `production_ready: true` от Railway → `bot:webhook:set` → smoke.
+4. Workflow: `deploy:check` → CI-гейт → миграции (**включая бакет `catalog`**) → сид → сборка SPA → Pages → ожидание `production_ready: true` от Railway → `bot:webhook:set` → smoke.
 5. Проверить `pnpm bot:webhook:info` (`last_error_message: нет`) и открыть Mini App из бота.
 
 Без ключевых секретов `deploy.yml` пропускает деплой с warning и остаётся зелёным. Если `CLOUDFLARE_API_TOKEN` не задан, Pages деплоится своей Git-интеграцией. Подробности — [`docs/10-ops-deploy.md`](docs/10-ops-deploy.md) §5.1.
@@ -200,6 +223,22 @@ pnpm bot:webhook:info                # last_error_message: нет
 ```
 
 Затем откройте Mini App из бота: `/v1/auth/telegram` должен вернуть `access_token`, а `/terms`, `/support`, `/paysupport` — ответить. Только после этого тестируйте XTR-инвойс и возврат в test-окружении.
+
+### Шаг 7 · Что делать дальше
+
+| # | Шаг | Зачем |
+|---|---|---|
+| 1 | `pnpm deploy:check` → заполнить последние `✗` | гейт перед любым деплоем |
+| 2 | Создать Supabase project + JWK (импорт и **Rotate key**), Railway, Cloudflare Pages, GitHub Secrets/Variables | Q-02 |
+| 3 | Запустить `deploy.yml` с `seed_catalog=true` | миграции (+ бакет `catalog`) и каталог цен |
+| 4 | @BotFather: `/setcommands`, `/newapp` → `https://app.<domain>`, Stars, 2FA; `pnpm bot:webhook:set` | Q-01 |
+| 5 | Проверить `/health`, `/v1/catalog/cases`, `bot:webhook:info`, вход в Mini App | smoke |
+| 6 | Тестовый XTR-инвойс + возврат; проверить `entitlements` и `refunded_payment` | D-01, ADR-003 |
+| 7 | Подключить мониторинг/алерты (`infra/monitoring/alerts.md`), Sentry без PII, бэкапы + PITR | NFR |
+| 8 | Юридическая проверка R-01 (Valve IP), оферта, Privacy Policy, age-gate | Q-03, блокер релиза |
+| 9 | Распаковать ассеты в `assets/catalog/` → `pnpm assets:upload` → `pnpm assets:verify` | Q-12, замена заглушек ◈ |
+| 10 | Закрыть Q-04…Q-07 (веса дропа, XP, прайс XTR, старт), заполнить `case_drop_pool` (BUG-012) | экономика этапа 2 |
+| 11 | Подключить `@telegram-apps/sdk` (BUG-011), 22 мини-игры, PvP, чат, друзья | FR этапов 3–9 |
 
 ### Частые проблемы
 

@@ -100,7 +100,7 @@ XTR · pnpm workspaces + Turborepo · Vitest / Playwright / pgTAP / k6 · GitHub
 - **Ветки:** `main` (prod) ← `develop` ← `feat/<scope>-<short>` / `fix/<bug-id>`.
 - **Коммиты:** Conventional Commits, например `feat(cases): add roulette canvas`, `fix(BUG-007): idempotent sell`. Ссылка на ADR/баг в теле.
 - **Перед PR:** `pnpm lint && pnpm typecheck && pnpm test && pnpm docs:lint`.
-- **Локально:** `pnpm install` → `pnpm --filter @case-sim/bot dev` (порт 3000, in-memory БД) + `pnpm --filter @case-sim/web dev` (порт 5173). Перед `supabase db reset`: `pnpm db:seed:generate`.
+- **Локально:** `pnpm install` → `pnpm --filter @case-sim/bot dev` (порт 3000, in-memory БД) + `pnpm --filter @case-sim/web dev` (порт 5173). Перед `supabase db reset`: `pnpm db:seed:generate`. Бакет Storage `catalog` создаёт миграция `0012_storage.sql`; ассеты — `pnpm assets:upload` (после Q-03/Q-12).
 - **Настройка:** `README.md` §«Запуск и настройка»; `cp .env.example .env`, `pnpm env:check`, `pnpm setup:check`, `pnpm deploy:check`, `pnpm bot:webhook:set|info|delete`. Плейсхолдеры `<...>`/`sb_secret_...` в `.env` недопустимы. `VITE_*` — только build-time в `apps/web/.env` или Cloudflare Pages, в dev не задавать (Vite проксирует `/v1`); API_BASE без `/v1`, CDN_BASE без `/catalog`, только `sb_publishable_…`.
 - **Деплой:** `deploy.yml` (Q-01/Q-02 гейт) → `deploy:check` → миграции → `seed_catalog=true` при первом деплое → Pages → ожидание `/health` → webhook → smoke. `supabase db push` сид НЕ грузит; CSP-токены подставляются из `VITE_*`. См. `docs/10-ops-deploy.md` §5.1.
 - **PR обязан содержать:** что изменено, затронутые FR/NFR, обновлённые doc-файлы, скриншоты для UI, тесты, чекбокс «секреты не добавлены».

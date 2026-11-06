@@ -11,7 +11,7 @@ const problems = [];
 const expected = [
   '0001_extensions.sql', '0002_reference.sql', '0003_core.sql', '0004_economy.sql',
   '0005_games.sql', '0006_social.sql', '0007_payments.sql', '0008_rls.sql',
-  '0009_functions.sql', '0010_realtime.sql', '0011_cron.sql',
+  '0009_functions.sql', '0010_realtime.sql', '0011_cron.sql', '0012_storage.sql',
 ];
 for (const file of expected) {
   if (!existsSync(resolve(MIG, file))) problems.push(`нет миграции ${file}`);
@@ -30,6 +30,13 @@ for (const fn of ['open_case', 'sell_items', 'mass_sell', 'get_me', 'grant_entit
   if (!funcs.includes(fn)) problems.push(`0009_functions.sql: отсутствует RPC ${fn}`);
 }
 if (!/set search_path = ''/.test(funcs)) problems.push('RPC обязаны иметь set search_path = \'\'');
+
+const storage = existsSync(resolve(MIG, '0012_storage.sql'))
+  ? readFileSync(resolve(MIG, '0012_storage.sql'), 'utf8')
+  : '';
+if (!/storage\.buckets/i.test(storage) || !/catalog_public_read/i.test(storage)) {
+  problems.push('0012_storage.sql: нет бакета catalog или политики публичного чтения');
+}
 
 const seed = resolve(ROOT, 'supabase/seed.sql');
 if (!existsSync(seed)) problems.push('нет supabase/seed.sql');

@@ -320,6 +320,7 @@ packages/db/supabase/migrations/
   0009_functions.sql          все RPC
   0010_realtime.sql           publications + broadcast policies
   0011_cron.sql               расписания
+  0012_storage.sql            бакет Storage `catalog` + публичное чтение
 seed.sql                      импорт reference/prices.json + 241 кейса + SKU + level_curve
 ```
 

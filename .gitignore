@@ -29,6 +29,9 @@ supabase/.temp/
 supabase/seed-data.sql
 # Генерируется infra/scripts/copy-headers.mjs перед vite build
 apps/web/public/_headers
+
+# Локально распакованные ассеты APK/CDN (Q-03/Q-12) — НЕ коммитим, грузим в Storage
+assets/catalog/
 .railway/
 railway.json.bak
 

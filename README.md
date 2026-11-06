@@ -142,7 +142,7 @@ pnpm dlx supabase test db            # pgTAP: RLS и идемпотентнос�
 pnpm --filter @case-sim/db types     # сгенерировать packages/db/src/database.types.ts
 ```
 
-Пути миграций и сида заданы в `supabase/config.toml`. Сгенерированный `supabase/seed-data.sql` (~4.9 MB) в git не коммитится.
+Миграции **обязательно** лежат в `supabase/migrations/` — только этот путь читают `supabase db reset` и `supabase db push` (`[db.migrations] schema_paths` для этого не работает, он про декларативные схемы). Сгенерированный `supabase/seed-data.sql` (~4.9 MB) в git не коммитится.
 
 ### Шаг 3.1 · Storage в Supabase
 

@@ -235,7 +235,7 @@ pg_cron / coordinator создаёт game_rounds(seed_hash, starts_at)
 
 | Решение из ТЗ | Как реализовано | Отклонение |
 |---|---|---|
-| `SECURITY DEFINER` RPC | `packages/db/supabase/migrations/0009_functions.sql`, `set search_path = ''`, все ссылки квалифицированы | нет |
+| `SECURITY DEFINER` RPC | `supabase/migrations/0009_functions.sql`, `set search_path = ''`, все ссылки квалифицированы | канонический путь миграций — `supabase/migrations/` (иначе `db push` их не видит) |
 | pgcrypto для HMAC-RNG | фиксированная схема `extensions` (`extensions.hmac / digest / gen_random_bytes`) — одинаково на Supabase и локальном Postgres | уточнение схемы |
 | RLS на 100 % таблиц | `0008_rls.sql` включает RLS циклом по `pg_tables`, затем `revoke all` и точечные `grant select` | нет |
 | Денежные RPC | доступны только `service_role`; клиент получает доступ к чтению через свой JWT | нет |

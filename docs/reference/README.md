@@ -33,7 +33,7 @@
 
 ## Как использовать при разработке
 
-1. `prices.json` → `packages/db/supabase/seed.sql` → таблицы `price_snapshots`, `items`, `cases`.
+1. `prices.json` → `supabase/seed-data.sql` (генерируется `pnpm db:seed:generate`) → `supabase/seed.sql` → таблицы `price_snapshots`, `items`, `cases`.
 2. `case-names.txt` + `asset-manifest.txt` → выгрузка изображений → Supabase Storage `catalog/`.
 3. `i18n-keys.txt` / `ru-strings.txt` → `packages/shared/src/i18n-keys` и RU-словарь.
 4. `flags.json` → начальные значения `admin_flags`.

@@ -11,7 +11,7 @@
 | Unit | Vitest | RNG/HMAC, веса дропа, расчёт цены/wear/ST, формулы игр, XP-кривая, XTR-прайс, Zod-схемы | `apps/*/tests/unit`, `packages/shared` |
 | Контрактные | Vitest + OpenAPI | совпадение типов клиент/сервер, коды ошибок, формат ответа | `pnpm contract:check` |
 | Интеграционные | Vitest + локальный Supabase | RPC, транзакции, идемпотентность, каскады, cron | `apps/bot/tests/integration` |
-| RLS | pgTAP (`supabase test db`) | пользователь A не видит/не меняет строки B; `anon` не видит ничего; service_role только на сервере | `packages/db/supabase/tests` |
+| RLS | pgTAP (`supabase test db`) | пользователь A не видит/не меняет строки B; `anon` не видит ничего; service_role только на сервере | `supabase/tests` |
 | E2E | Playwright + TMA-эмулятор | онбординг, открытие кейса, продажа, игры, друзья, магазин, верификация раунда | `apps/web/tests/e2e` |
 | Платежи | test-бот Telegram | createInvoiceLink → pre_checkout → successful_payment → refund | `apps/bot/tests/integration/payments` |
 | Визуальные | Playwright snapshots | 40 состояний из [`02-ui-map.md`](02-ui-map.md) против `reference/screenshots/` | `apps/web/tests/visual` |
@@ -84,7 +84,7 @@
 
 ## 3. Тестовые данные
 
-- `packages/db/supabase/seed.sql`: 241 кейс, ~15 000 предметов из `reference/prices.json`, `rarity_config`, `sku_catalog`, `level_curve`, `admin_flags`.
+- `supabase/seed.sql`: 241 кейс, ~15 000 предметов из `reference/prices.json`, `rarity_config`, `sku_catalog`, `level_curve`, `admin_flags`.
 - Фикстуры: 10 тестовых пользователей, инвентарь с предметами всех редкостей, баланс $10 000 для e2e.
 - `TEST_MODE=true` → детерминированный `server_seed` из env для воспроизводимых снимков (никогда в prod).
 - Telegram test-бот + отдельные аккаунты для PvP-тестов.

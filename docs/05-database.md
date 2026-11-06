@@ -308,7 +308,7 @@ select cron.schedule('chat-cleanup','0 4 * * *', $$delete from public.chat_messa
 ## 11. Миграции и сидирование
 
 ```
-packages/db/supabase/migrations/
+supabase/migrations/              # канонический путь: db reset / db push читают только его
   0001_extensions.sql         pgcrypto, pg_cron, pg_net
   0002_reference.sql          rarity_config, cases, items, case_drop_pool
   0003_core.sql               users, wallets, profiles, entitlements

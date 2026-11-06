@@ -14,7 +14,7 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const ROOT = resolve(import.meta.dirname, '../..');
-const MIG = resolve(ROOT, 'packages/db/supabase/migrations');
+const MIG = resolve(ROOT, 'supabase/migrations');
 const files = readdirSync(MIG).filter((f) => f.endsWith('.sql')).sort();
 
 const db = new PGlite();

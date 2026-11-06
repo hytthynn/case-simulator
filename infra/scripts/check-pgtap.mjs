@@ -11,7 +11,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const ROOT = resolve(import.meta.dirname, '../..');
-const MIG = resolve(ROOT, 'packages/db/supabase/migrations');
+const MIG = resolve(ROOT, 'supabase/migrations');
 const TESTS = resolve(ROOT, 'supabase/tests');
 
 const db = new PGlite();

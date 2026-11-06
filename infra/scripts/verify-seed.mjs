@@ -5,7 +5,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
-const MIG = resolve(ROOT, 'packages/db/supabase/migrations');
+const MIG = resolve(ROOT, 'supabase/migrations');
 const problems = [];
 
 const expected = [
@@ -15,6 +15,11 @@ const expected = [
 ];
 for (const file of expected) {
   if (!existsSync(resolve(MIG, file))) problems.push(`нет миграции ${file}`);
+}
+// db push / db reset читают ТОЛЬКО supabase/migrations/. Любой другой путь =
+// миграции молча не применяются (был реальный инцидент в CI).
+if (existsSync(resolve(ROOT, 'packages/db/supabase/migrations'))) {
+  problems.push('миграции обнаружены вне supabase/migrations/ — Supabase CLI их не применит');
 }
 
 const rls = existsSync(resolve(MIG, '0008_rls.sql')) ? readFileSync(resolve(MIG, '0008_rls.sql'), 'utf8') : '';

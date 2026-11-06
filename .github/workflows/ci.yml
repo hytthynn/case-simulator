@@ -85,4 +85,12 @@ jobs:
       - name: Apply migrations + seed
         run: supabase db reset
       - name: pgTAP (RLS, idempotency)
-        run: supabase test db
+        # Логи job'а требуют токен, а annotations доступны публично —
+        # дублируем строки провала в annotations для диагностики без секретов.
+        run: |
+          if supabase test db 2>&1 | tee /tmp/pgtap.log; then
+            exit 0
+          fi
+          grep -E 'not ok|ERROR|error:|Bail out|Failed|failed|psql:|permission denied' /tmp/pgtap.log \
+            | head -30 | while IFS= read -r line; do echo "::error::$line"; done
+          exit 1

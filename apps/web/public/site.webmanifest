@@ -1,0 +1,11 @@
+{
+  "name": "Симулятор Кейсов",
+  "short_name": "Case Sim",
+  "description": "Симулятор 18+. Реальные деньги не используются, предметы не выводятся.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0B0C0E",
+  "theme_color": "#0B0C0E",
+  "lang": "ru",
+  "icons": []
+}

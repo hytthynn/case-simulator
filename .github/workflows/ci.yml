@@ -84,14 +84,18 @@ jobs:
         run: |
           set -o pipefail
           if supabase start 2>&1 | tee /tmp/start.log; then exit 0; fi
-          tail -40 /tmp/start.log | while IFS= read -r line; do echo "::error::$line"; done
+          { grep -Ei 'error|fail|fatal|cannot|denied|timed out|psql:|does not exist|invalid' /tmp/start.log \
+              | grep -Eiv 'pull complete|downloaded newer image|digest:|public.ecr.aws|status: downloaded' \
+              | tail -8; tail -2 /tmp/start.log; } \
+            | while IFS= read -r line; do echo "::error::$line"; done
           exit 1
       - name: Apply migrations + seed
         run: |
           set -o pipefail
           if supabase db reset 2>&1 | tee /tmp/reset.log; then exit 0; fi
-          grep -E 'ERROR|error:|failed|Failed|permission denied|already exists|does not exist|Applying migration' /tmp/reset.log \
-            | tail -30 | while IFS= read -r line; do echo "::error::$line"; done
+          { grep -Ei 'error|fail|fatal|denied|psql:|does not exist' /tmp/reset.log \
+              | grep -Eiv 'pull complete|downloaded newer image|digest:' | tail -8; tail -2 /tmp/reset.log; } \
+            | while IFS= read -r line; do echo "::error::$line"; done
           exit 1
       - name: Ensure catalog seed (14 945 items, 241 cases)
         # db push его не грузит, а sql_paths может отличаться между версиями CLI —

@@ -16,10 +16,12 @@ major_version = 15
 # их ищут `supabase db reset` и `supabase db push`. НЕ пытайтесь перенаправить
 # их через [db.migrations] schema_paths: этот ключ задаёт порядок ДЕКЛАРАТИВНЫХ
 # схем для движка migra и игнорируется pg-delta / db push.
+# Сид НЕ применяется автоматически: 5 МБ SQL с psql-директивой `\ir` не всегда
+# совместим с загрузчиком CLI и может уронить `supabase start`/`db push`.
+# Каталог грузится ЯВНО: ci.yml → "Ensure catalog seed", deploy.yml → seed_catalog=true,
+# локально → `supabase db reset` + `psql -f supabase/seed.sql` (см. README §3).
 [db.seed]
-enabled = true
-# Пути считаются ОТНОСИТЕЛЬНО каталога supabase/, не от корня репозитория.
-sql_paths = ["./seed.sql"]
+enabled = false
 
 [db.pooler]
 enabled = false

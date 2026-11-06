@@ -2,7 +2,12 @@
 begin;
 select plan(7);
 
-select public.ensure_user(920001, 'tester', 'Tester', null, 'ru');
+-- Setup в DO-блоке, чтобы не отдавать лишние строки в TAP-поток pg_prove.
+do $$
+begin
+  perform public.ensure_user(920001, 'tester', 'Tester', null, 'ru');
+end
+$$;
 insert into public.cases (id, name, kind, image_url, base_price, key_price, section)
 values ('pgtap-case', 'PGTAP Case', 'case', 'catalog/cases/pgtap.png', 1.00, 0, 'cases')
 on conflict (id) do nothing;

@@ -29,8 +29,13 @@ select ok(
   'сиды provably-fair недоступны клиенту'
 );
 
-select public.ensure_user(910001, 'alice', 'Alice', null, 'ru');
-select public.ensure_user(910002, 'bob', 'Bob', null, 'ru');
+-- Setup НЕ должен возвращать строки: pg_prove считает каждый SELECT тестом.
+do $$
+begin
+  perform public.ensure_user(910001, 'alice', 'Alice', null, 'ru');
+  perform public.ensure_user(910002, 'bob', 'Bob', null, 'ru');
+end
+$$;
 
 set local role authenticated;
 set local request.jwt.claims = '{"role":"authenticated","app_metadata":{"telegram_user_id":"910001"}}';

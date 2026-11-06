@@ -89,6 +89,41 @@ for (const [label, query, min] of checks) {
   }
 }
 
+// --- smoke денежных RPC: ensure_user → open_case → баланс/rolls ------------
+try {
+  await db.exec(`
+    -- Справочник редкостей обычно грузится seed.sql; здесь задаём минимум.
+    insert into public.rarity_config (rarity, weight, color_hex, sort_order) values
+      ('consumer', 0, '#B0C3D9', 1), ('industrial', 0, '#5E98D9', 2),
+      ('mil_spec', 0.7992, '#4B69FF', 3), ('restricted', 0.1598, '#8847FF', 4),
+      ('classified', 0.0320, '#D32CE6', 5), ('covert', 0.0064, '#EB4B4B', 6),
+      ('rare_special', 0.0026, '#F5C542', 7)
+    on conflict (rarity) do nothing;
+    do $smoke$ begin perform public.ensure_user(990001, 'smoke', 'Smoke', null, 'ru'); end $smoke$;
+    insert into public.cases (id, name, kind, image_url, base_price, key_price, section)
+      values ('smoke-case', 'Smoke Case', 'case', 'x.png', 1.00, 0, 'cases');
+    insert into public.items (id, name, type, rarity, image_url, stattrak_eligible, prices, base_price)
+      values ('smoke-item', 'Smoke Item', 'skin', 'mil_spec', 'x.png', false, '{"price":1.00}'::jsonb, 1.00);
+    select public.open_case(990001, 'smoke-case', 1, 'client-seed', 'smoke-idem-1');
+  `);
+  const checksRpc = await db.query(`
+    select
+      (select count(*)::int from public.users where telegram_user_id = 990001) as users,
+      (select count(*)::int from public.rolls where telegram_user_id = 990001) as rolls,
+      (select balance::text from public.wallets where telegram_user_id = 990001) as balance
+  `);
+  const row = checksRpc.rows[0];
+  if (row.users === 1 && row.rolls === 1 && row.balance === '9.00') {
+    console.log('  ✓ RPC smoke: ensure_user + open_case, баланс 9.00');
+  } else {
+    console.error(`  ✗ RPC smoke: ${JSON.stringify(row)}`);
+    failed += 1;
+  }
+} catch (error) {
+  console.error(`  ✗ RPC smoke: ${String(error?.message ?? error)}`);
+  failed += 1;
+}
+
 console.log(`\ncheck-migrations: ${applied}/${files.length} миграций применены`);
 if (failed) process.exit(1);
-console.log('check-migrations: OK (SQL валиден без Docker)');
+console.log('check-migrations: OK (SQL + RPC валидны без Docker)');

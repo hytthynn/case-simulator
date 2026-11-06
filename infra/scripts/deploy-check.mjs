@@ -86,10 +86,19 @@ check('SUPABASE_JWT_JWK', {
 check('DATABASE_URL', { required: false, hint: 'нужен для загрузки каталога (seed) в прод' });
 
 // --- Сборка SPA (VITE_* = build-time, публичные) ----------------------------
-check('VITE_API_BASE_URL', { validate: https, hint: 'https://api.<domain> — БЕЗ /v1 на конце' });
+check('VITE_API_BASE_URL', {
+  validate: (v) => https(v) ?? (v.replace(/\/+$/, '').endsWith('/v1') ? 'не добавляйте /v1 — клиент делает это сам' : null),
+  hint: 'https://api.<domain> — БЕЗ /v1 на конце',
+});
 check('VITE_SUPABASE_URL', { validate: https });
-check('VITE_SUPABASE_PUBLISHABLE_KEY', {});
-check('VITE_CDN_BASE_URL', { required: false, hint: 'без него картинки кейсов будут заглушками' });
+check('VITE_SUPABASE_PUBLISHABLE_KEY', {
+  validate: (v) => (v.startsWith('sb_secret_') || v.startsWith('service_role') ? 'это СЕКРЕТНЫЙ ключ, нужен sb_publishable_…' : null),
+});
+check('VITE_CDN_BASE_URL', {
+  required: false,
+  validate: https,
+  hint: 'https://<cdn> БЕЗ /catalog (пути в БД уже содержат catalog/…); без него картинки будут заглушками',
+});
 
 // --- Файлы и конфигурация --------------------------------------------------
 const headersFile = resolve(ROOT, 'infra/cloudflare/_headers');

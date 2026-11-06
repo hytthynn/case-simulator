@@ -3,9 +3,19 @@ import type { CaseDto } from '@case-sim/shared';
 
 const CDN = (import.meta.env.VITE_CDN_BASE_URL as string | undefined) ?? '';
 
+/**
+ * image_url в БД уже начинается с `catalog/…`, поэтому VITE_CDN_BASE_URL — это
+ * ORIGIN без пути. Отсекаем случайно указанный `/catalog`, иначе получится
+ * `/catalog/catalog/cases/…` и все картинки будут 404.
+ */
+export function composeAssetUrl(cdnBase: string, path: string): string {
+  const base = cdnBase.trim().replace(/\/+$/, '').replace(/\/catalog$/, '');
+  if (!base) return '';
+  return `${base}/${path.replace(/^\/+/, '')}`;
+}
+
 export function caseImageUrl(path: string): string {
-  if (!CDN) return '';
-  return `${CDN.replace(/\/$/, '')}/${path.replace(/^\//, '')}`;
+  return composeAssetUrl(CDN, path);
 }
 
 export function CaseCard({ item, onOpen }: { item: CaseDto; onOpen: (item: CaseDto) => void }) {

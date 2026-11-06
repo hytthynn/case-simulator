@@ -106,7 +106,28 @@ for (const group of GROUPS) {
 
 const unknown = [...fileValues.keys()].filter((k) => !templateKeys.has(k));
 if (unknown.length) console.log(`  ! Ключи вне шаблона: ${unknown.join(', ')}`);
-console.log('  VITE_* для production задаются в apps/web/.env или Cloudflare Pages, не здесь.');
+
+// --- Фронтенд: apps/web/.env (пустое значение = корректный dev) ------------
+const webEnvPath = resolve(ROOT, 'apps/web/.env');
+const webValues = parseEnvFile(webEnvPath);
+const WEB_KEYS = [
+  ['VITE_API_BASE_URL', 'обязателен в проде, БЕЗ /v1'],
+  ['VITE_SUPABASE_URL', 'CSP connect-src'],
+  ['VITE_SUPABASE_PUBLISHABLE_KEY', 'публичный ключ'],
+  ['VITE_CDN_BASE_URL', 'БЕЗ /catalog на конце'],
+  ['VITE_MINIAPP_VERSION', 'резерв'],
+  ['VITE_DEFAULT_LOCALE', 'резерв'],
+];
+console.log('  Фронтенд · apps/web/.env (в dev оставьте ВСЁ закомментированным)');
+if (!existsSync(webEnvPath)) console.log('    (файл не создан — это нормально для dev)');
+for (const [key, note] of WEB_KEYS) {
+  const value = (process.env[key] ?? webValues.get(key) ?? '').trim();
+  const status = !value ? 'ПУСТО (OK)' : isPlaceholder(value) ? 'ПЛЕЙСХОЛДЕР' : 'OK';
+  const shown = value ? mask(key, value) : key === 'VITE_API_BASE_URL' ? '(прокси :3000)' : '(не задано)';
+  console.log(`    ${status.padEnd(12)} ${key.padEnd(32)} ${shown.padEnd(30)} ${note}`);
+}
+console.log('');
+console.log('  apps/web/.env в git не попадает: для Cloudflare Pages задайте VITE_* как build-time env.');
 console.log('  Полная проверка перед деплоем: pnpm deploy:check');
 
 if (problems.length) {

@@ -11,7 +11,7 @@ import {
   translate,
   xpForLevel,
 } from '@case-sim/shared';
-import { caseImageUrl } from '../src/features/cases/CaseCard';
+import { caseImageUrl, composeAssetUrl } from '../src/features/cases/CaseCard';
 
 describe('шелл 1:1', () => {
   it('5 нижних табов и 22 игры', () => {
@@ -47,5 +47,17 @@ describe('шелл 1:1', () => {
 
   it('URL ассета строится из CDN_BASE_URL', () => {
     expect(caseImageUrl('catalog/cases/x.png')).toBeTypeOf('string');
+  });
+
+  it('CDN без /catalog и с /catalog дают один и тот же корректный путь', () => {
+    const path = 'catalog/cases/Kilowatt Case.png';
+    expect(composeAssetUrl('https://cdn.example.com', path)).toBe(
+      'https://cdn.example.com/catalog/cases/Kilowatt Case.png',
+    );
+    expect(composeAssetUrl('https://cdn.example.com/catalog/', path)).toBe(
+      'https://cdn.example.com/catalog/cases/Kilowatt Case.png',
+    );
+    expect(composeAssetUrl('https://cdn.example.com/', path)).not.toContain('//catalog');
+    expect(composeAssetUrl('', path)).toBe('');
   });
 });

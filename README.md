@@ -113,7 +113,23 @@ pnpm dlx supabase gen signing-key --algorithm ES256
 3. Нажмите **Rotate key**, чтобы ключ стал активным. Без импорта и ротации Supabase не доверит JWT, подписанный вашим ботом.
 4. В `.env`/секреты положите JWK **одной строкой JSON**; `deploy:check` проверит наличие `kid` и `d`.
 
-Проверить результат: `pnpm env:check` (локально, маскирует значения) и `pnpm deploy:check` (перед деплоем).
+Проверить результат: `pnpm env:check` (локально, маскирует значения, показывает и `apps/web/.env`) и `pnpm deploy:check` (перед деплоем).
+
+#### `apps/web/.env` — фронтенд, build-time
+
+**В локальном dev оставьте файл полностью закомментированным** — это правильно: `vite.config.ts` проксирует `/v1` и `/health` на `http://127.0.0.1:3000`. Если раскомментировать `VITE_API_BASE_URL`, прокси обойдётся и каталог станет пустым.
+
+Для production раскомментируйте (или, что надёжнее, задайте как **build-time env в Cloudflare Pages** — `apps/web/.env` в `.gitignore` и до CI не доедет):
+
+| Поле | Значение | Зачем |
+|---|---|---|
+| `VITE_API_BASE_URL` | `https://api.<domain>` или `https://<service>.up.railway.app` — **БЕЗ `/v1`** | клиент сам добавляет `/v1` |
+| `VITE_SUPABASE_URL` | `https://<ref>.supabase.co` | origin для CSP `connect-src` |
+| `VITE_SUPABASE_PUBLISHABLE_KEY` | `sb_publishable_…` (**не** `sb_secret_…`) | публичный ключ; сейчас зарезервирован |
+| `VITE_CDN_BASE_URL` | `https://<cdn>` — **БЕЗ `/catalog`** | пути в БД уже содержат `catalog/…`; без переменной будут заглушки ◈ |
+| `VITE_MINIAPP_VERSION`, `VITE_DEFAULT_LOCALE` | `0.2.0`, `ru` | резерв под этап 2, кодом пока не читаются |
+
+`VITE_*` попадают в **публичный JS-бандл**: секреты (`BOT_TOKEN`, `sb_secret_…`, JWK, `DATABASE_URL`) сюда класть нельзя. CSP при сборке подставляется из этих же переменных, поэтому задавать их нужно именно **на этапе сборки**, а не в рантайме Railway.
 
 ### Шаг 3 · Supabase (локальная БД)
 

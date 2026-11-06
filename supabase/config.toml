@@ -18,7 +18,8 @@ major_version = 15
 # схем для движка migra и игнорируется pg-delta / db push.
 [db.seed]
 enabled = true
-sql_paths = ["./supabase/seed.sql"]
+# Пути считаются ОТНОСИТЕЛЬНО каталога supabase/, не от корня репозитория.
+sql_paths = ["./seed.sql"]
 
 [db.pooler]
 enabled = false

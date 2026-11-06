@@ -223,6 +223,11 @@ begin
         select array_agg(id order by id) into v_pool from public.items;
       end if;
 
+      -- Без сида каталог пуст: лучше явная ошибка, чем NULL в NOT NULL колонку.
+      if v_pool is null or array_length(v_pool, 1) is null then
+        raise exception using errcode = 'P0001', message = 'CATALOG_EMPTY';
+      end if;
+
       v_u_item := public.fair_uniform(v_seed, p_client_seed, v_current_nonce, 1);
       v_item_id := v_pool[1 + floor(v_u_item * array_length(v_pool, 1))::int];
       select * into v_item from public.items where id = v_item_id;

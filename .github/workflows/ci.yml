@@ -93,6 +93,14 @@ jobs:
           grep -E 'ERROR|error:|failed|Failed|permission denied|already exists|does not exist|Applying migration' /tmp/reset.log \
             | tail -30 | while IFS= read -r line; do echo "::error::$line"; done
           exit 1
+      - name: Ensure catalog seed (14 945 items, 241 cases)
+        # db push его не грузит, а sql_paths может отличаться между версиями CLI —
+        # гарантируем наполнение каталога явно, иначе open_case получит NULL item_id.
+        run: |
+          DB_URL="postgresql://postgres:postgres@127.0.0.1:54322/postgres"
+          if [ "$(psql "$DB_URL" -tAc 'select count(*) from public.items' | tr -d ' ')" = "0" ]; then
+            psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/seed.sql
+          fi
       - name: pgTAP (RLS, idempotency)
         # Логи job'а требуют токен, а annotations доступны публично —
         # дублируем строки провала в annotations для диагностики без секретов.

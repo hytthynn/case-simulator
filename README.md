@@ -142,7 +142,7 @@ pnpm dlx supabase test db            # pgTAP: RLS и идемпотентнос�
 pnpm --filter @case-sim/db types     # сгенерировать packages/db/src/database.types.ts
 ```
 
-Миграции **обязательно** лежат в `supabase/migrations/` — только этот путь читают `supabase db reset` и `supabase db push` (`[db.migrations] schema_paths` для этого не работает, он про декларативные схемы). Сгенерированный `supabase/seed-data.sql` (~4.9 MB) в git не коммитится.
+Миграции **обязательно** лежат в `supabase/migrations/` — только этот путь читают `supabase db reset` и `supabase db push` (`[db.migrations] schema_paths` для этого не работает, он про декларативные схемы). Авто-сид в CLI **отключён** (`[db.seed] enabled = false`): 5 МБ SQL с `\ir` роняет `supabase start`. Каталог грузится явным `psql -f supabase/seed.sql` (в CI — шаг `Ensure catalog seed`, в проде — флаг `seed_catalog=true`). Сгенерированный `supabase/seed-data.sql` (~4.9 MB) в git не коммитится.
 
 ### Шаг 3.1 · Storage в Supabase
 
@@ -212,7 +212,7 @@ pnpm deploy:check
 4. Workflow: `deploy:check` → CI-гейт → миграции (**включая бакет `catalog`**) → сид → сборка SPA → Pages → ожидание `production_ready: true` от Railway → `bot:webhook:set` → smoke.
 5. Проверить `pnpm bot:webhook:info` (`last_error_message: нет`) и открыть Mini App из бота.
 
-Без ключевых секретов `deploy.yml` пропускает деплой с warning и остаётся зелёным. Если `CLOUDFLARE_API_TOKEN` не задан, Pages деплоится своей Git-интеграцией. Подробности — [`docs/10-ops-deploy.md`](docs/10-ops-deploy.md) §5.1.
+Без ключевых секретов `deploy.yml` пропускает деплой с warning и остаётся зелёным. **Минимум для срабатывания job `deploy`**: Secrets `TELEGRAM_BOT_TOKEN`, `SUPABASE_ACCESS_TOKEN` и Variable `HEALTHCHECK_URL` — без них preflight вернёт `ready=false` и job будет `skipped`. Остальные Secrets/Variables из таблицы выше нужны для шагов миграций, сида, Pages и smoke. Если `CLOUDFLARE_API_TOKEN` не задан, Pages деплоится своей Git-интеграцией. Подробности — [`docs/10-ops-deploy.md`](docs/10-ops-deploy.md) §5.1.
 
 ### Шаг 6 · Проверка
 

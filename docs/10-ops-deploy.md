@@ -143,7 +143,7 @@ jobs:
 2. **`pnpm deploy:check`** — проверяет все переменные, формат приватного ES256 JWK (в т.ч. `kid`), HTTPS и путь `/telegram/webhook`, отсутствие `.env`/`seed-data.sql` в git, CSP-токены. Секреты не выводятся.
 3. CI-гейт: `lint && typecheck && test && docs:lint`.
 4. `pnpm db:seed:generate` → `supabase link && supabase db push` (миграции, **pre-deploy**).
-5. **Сид каталога — отдельным шагом**: `supabase db push` НЕ выполняет `seed.sql`. На первом деплое запустить workflow с `seed_catalog=true`: `psql "$DATABASE_URL" -f supabase/seed.sql` загрузит 14 945 предметов, 241 кейс, SKU, флаги и `level_curve`. Все `INSERT` идемпотентны (`ON CONFLICT DO NOTHING`), повтор безопасен.
+5. **Сид каталога — отдельным шагом**: `supabase db push` НЕ выполняет `seed.sql`, а `[db.seed] enabled = false` (5 МБ SQL с `\ir` несовместим с загрузчиком CLI и роняет `supabase start`). На первом деплое запустить workflow с `seed_catalog=true`: `psql "$DATABASE_URL" -f supabase/seed.sql` загрузит 14 945 предметов, 241 кейс, SKU, флаги и `level_curve`. В CI тот же файл грузит шаг `Ensure catalog seed`. Все `INSERT` идемпотентны (`ON CONFLICT DO NOTHING`), повтор безопасен. Без сида `open_case` бросает `CATALOG_EMPTY`.
 6. Сборка SPA с `VITE_*` → `wrangler pages deploy apps/web/dist` (если задан `CLOUDFLARE_API_TOKEN`), иначе деплой через Git-интеграцию Cloudflare.
 7. Railway деплоится своей Git-интеграцией (`Wait for CI`); workflow ждёт `GET /health` → `production_ready: true` до 5 минут.
 8. `pnpm bot:webhook:set` → `bot:webhook:info` → smoke (`/health`, `/v1/time`, `/v1/catalog/cases`).

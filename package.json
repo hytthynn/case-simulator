@@ -1,0 +1,27 @@
+{
+  "name": "case-sim",
+  "version": "0.2.0",
+  "private": true,
+  "description": "Telegram Mini App «Симулятор Кейсов» — реплика 1:1 Android-приложения com.cs2casesim.cs2_case_sim",
+  "packageManager": "pnpm@10.34.9",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "test:unit": "turbo run test",
+    "contract:check": "pnpm typecheck",
+    "docs:lint": "node infra/scripts/docs-lint.mjs",
+    "db:seed:generate": "node infra/scripts/import-prices.mjs",
+    "assets:verify": "node infra/scripts/verify-assets.mjs"
+  },
+  "devDependencies": {
+    "turbo": "2.11.10",
+    "typescript": "5.9.3",
+    "vitest": "3.2.7"
+  }
+}

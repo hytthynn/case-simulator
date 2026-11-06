@@ -1,0 +1,27 @@
+Case Simulator — Telegram Mini App
+===================================
+
+Third-party notices / Атрибуция третьих лиц
+------------------------------------------
+
+Fonts (extracted 1:1 from the reference APK, D-03):
+  * Orbitron Variable — SIL Open Font License 1.1
+    https://scripts.sil.org/OFL
+  * Rajdhani (Light / Regular / Medium / SemiBold / Bold) — SIL Open Font License 1.1
+    https://scripts.sil.org/OFL
+
+  Font files are NOT committed to this repository. They are copied from the local
+  APK bundle into Supabase Storage during stage 2 (docs/18 in 00-ТЗ.md). The OFL
+  license text and copyright notices must be shipped alongside the fonts.
+
+Game artwork and item names:
+  * CS2 case/skin images and names belong to Valve Corporation.
+  * Used per decision D-03 (1:1 assets). Legal review R-01 / Q-03 is REQUIRED
+    before any public release. This project is an unofficial fan-made simulator
+    and is not affiliated with or endorsed by Valve.
+
+Telegram:
+  * Telegram Mini App / Bot API / Stars (XTR) usage follows
+    https://core.telegram.org/bots/webapps and https://core.telegram.org/bots/payments-stars
+
+The project documentation and source code are the property of the project owner.

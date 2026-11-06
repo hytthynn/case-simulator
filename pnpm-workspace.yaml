@@ -1,0 +1,8 @@
+packages:
+  - 'apps/*'
+  - 'packages/*'
+
+# pnpm 10: явно разрешаем postinstall нативных сборщиков (Vite/tsup/Tailwind).
+onlyBuiltDependencies:
+  - esbuild
+  - '@tailwindcss/oxide'

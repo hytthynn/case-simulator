@@ -1,0 +1,20 @@
+{
+  "name": "@case-sim/db",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "description": "Supabase migrations, seed, RPC and pgTAP tests",
+  "scripts": {
+    "db:push": "supabase db push",
+    "db:reset": "supabase db reset",
+    "db:test": "supabase test db",
+    "types": "supabase gen types typescript --local > src/database.types.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "lint": "tsc --noEmit -p tsconfig.json",
+    "build": "tsc --noEmit -p tsconfig.json",
+    "test": "node ../../infra/scripts/verify-seed.mjs"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3"
+  }
+}

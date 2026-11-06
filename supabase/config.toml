@@ -1,0 +1,46 @@
+project_id = "case-sim"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+shadow_port = 54320
+major_version = 15
+
+# Миграции лежат в packages/db (docs/04-architecture.md §3).
+[db.migrations]
+schema_paths = ["./packages/db/supabase/migrations/*.sql"]
+
+[db.seed]
+enabled = true
+sql_paths = ["./supabase/seed.sql"]
+
+[db.pooler]
+enabled = false
+
+[realtime]
+enabled = true
+
+[studio]
+enabled = true
+port = 54323
+
+[storage]
+enabled = true
+file_size_limit = "50MiB"
+
+[auth]
+enabled = true
+site_url = "http://127.0.0.1:5173"
+additional_redirect_urls = ["https://t.me"]
+jwt_expiry = 3600
+enable_signup = false
+
+[auth.external]
+# Telegram-авторизация реализована собственным ES256 JWT (ADR-002),
+# встроенные провайдеры Supabase Auth не используются.

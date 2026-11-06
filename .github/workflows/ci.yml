@@ -81,9 +81,19 @@ jobs:
       - name: Supabase CLI version
         run: supabase --version
       - name: Start local Supabase (Docker)
-        run: supabase start
+        run: |
+          set -o pipefail
+          if supabase start 2>&1 | tee /tmp/start.log; then exit 0; fi
+          grep -E 'ERROR|error:|failed|Failed|permission denied|already exists|does not exist|Applying migration' /tmp/start.log \
+            | tail -30 | while IFS= read -r line; do echo "::error::$line"; done
+          exit 1
       - name: Apply migrations + seed
-        run: supabase db reset
+        run: |
+          set -o pipefail
+          if supabase db reset 2>&1 | tee /tmp/reset.log; then exit 0; fi
+          grep -E 'ERROR|error:|failed|Failed|permission denied|already exists|does not exist|Applying migration' /tmp/reset.log \
+            | tail -30 | while IFS= read -r line; do echo "::error::$line"; done
+          exit 1
       - name: pgTAP (RLS, idempotency)
         # Логи job'а требуют токен, а annotations доступны публично —
         # дублируем строки провала в annotations для диагностики без секретов.

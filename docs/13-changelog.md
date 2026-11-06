@@ -22,6 +22,7 @@
 - **ADR-006** — старт этапа 1 на interim-допущениях §5 `14-open-questions.md`; Q-01/Q-02/Q-03 остаются блокерами деплоя и релиза (ADR-006).
 - `docs/00-ТЗ.md` — статус «stage 0» → «stage 1 (инфраструктура)»; `AGENTS.md`, `README.md` — новая структура и быстрый старт.
 - `docs/04-architecture.md` — фактическая раскладка каталогов и отклонения этапа 1.
+- `README.md` §«Запуск и настройка» — установка pnpm через `npm i -g pnpm@10.34.9` вместо `corepack enable`: на Node.js 25+ Corepack не поставляется (проверено на Node 26.13.0 в PowerShell, `pnpm setup:check` зелёный). Добавлена строка troubleshooting.
 
 ### Исправлено
 - BUG-011 — вместо `@telegram-apps/sdk` на этапе 1 используется типизированный адаптер `window.Telegram.WebApp` с `isVersionAtLeast()`; статус **open**, закрывается вместе с Q-01/Q-02.

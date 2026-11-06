@@ -38,7 +38,7 @@
 
 | Что | Зачем | Минимум для локального demo |
 |---|---|---|
-| Node.js 22 + pnpm 10 | сборка и запуск | **да** (`corepack enable`) |
+| Node.js ≥ 22 + pnpm 10.34.9 | сборка и запуск | **да** (`npm i -g pnpm@10.34.9`) |
 | Docker + Supabase CLI | локальная БД, миграции, pgTAP | нет (есть in-memory адаптер) |
 | Telegram-бот от @BotFather | auth, XTR, webhook | нет (Q-01) |
 | Аккаунты Supabase / Railway / Cloudflare / GitHub | деплой | нет (Q-02) |
@@ -46,11 +46,16 @@
 ### Шаг 1 · Локальный demo без ключей (2 минуты)
 
 ```bash
-corepack enable
+node -v                             # должно быть >= 22
+npm install -g pnpm@10.34.9         # один раз, глобально
+pnpm -v                             # 10.34.9
 pnpm install
 pnpm --filter @case-sim/bot dev     # http://127.0.0.1:3000
 pnpm --filter @case-sim/web dev     # http://127.0.0.1:5173
 ```
+
+> ⚠️ **Windows / PowerShell:** начиная с **Node.js 25** Corepack больше не входит в поставку, поэтому `corepack enable` и `pnpm` не находятся. Ставьте pnpm через npm, как выше, и **перезапустите терминал** после установки. На Node 22 LTS альтернатива — `corepack enable pnpm`. `.nvmrc` проекта = `22`, но сборка и тесты проверены и на Node 26.
+> Если PowerShell ругается на `pnpm.ps1` (Execution Policy), используйте `pnpm.cmd install` или `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`.
 
 Откройте `http://localhost:5173`. Vite проксирует `/v1` на бот, поэтому **`VITE_API_BASE_URL` в dev задавать нельзя**.
 Работает: 5 табов, каталог, 22 игры, 18+ дисклеймер, оффлайн-баннер, `/health`, `/v1/time`.
@@ -131,6 +136,7 @@ pnpm bot:webhook:info                # last_error_message: нет
 
 | Симптом | Причина |
 |---|---|
+| `pnpm` / `corepack` «не распознано как имя командлета» | Node.js 25+ без Corepack и без глобального pnpm → `npm i -g pnpm@10.34.9`, затем перезапустить терминал |
 | Каталог пуст в браузере | бот не запущен на `:3000` или в dev задан `VITE_API_BASE_URL` |
 | `production_ready: false` | не хватает `BOT_TOKEN` / webhook secret / Supabase URL+key / JWK (Q-01, Q-02) |
 | `401 INVALID_INIT_DATA` | открыто из обычного браузера, а не из Telegram; либо истёк TTL 3600 с |

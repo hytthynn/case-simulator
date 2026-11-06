@@ -31,6 +31,7 @@ await exec(`
   create schema if not exists extensions;
   create schema if not exists auth;
   create schema if not exists storage;
+  create schema if not exists realtime;
   create or replace function extensions.hmac(data text, key text, algo text)
     returns bytea language sql immutable as $s$ select sha256(convert_to(data || key, 'UTF8')) $s$;
   create or replace function extensions.digest(data text, algo text)
@@ -43,6 +44,7 @@ await exec(`
   );
   create table if not exists storage.objects (id uuid primary key default gen_random_uuid(), bucket_id text, name text);
   alter table storage.objects enable row level security;
+  create table if not exists realtime.messages (id bigserial primary key, topic text, extension text, payload jsonb);
 
   -- эмуляция pgTAP
   create or replace function public.plan(n int) returns text language sql as $s$ select '1..' || n $s$;

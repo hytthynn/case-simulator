@@ -25,6 +25,7 @@ try {
     create schema if not exists extensions;
     create schema if not exists auth;
     create schema if not exists storage;
+    create schema if not exists realtime;
 
     create or replace function extensions.hmac(data text, key text, algo text)
       returns bytea language sql immutable as $s$ select sha256(convert_to(data || key, 'UTF8')) $s$;
@@ -41,6 +42,10 @@ try {
       id uuid primary key default gen_random_uuid(), bucket_id text, name text
     );
     alter table storage.objects enable row level security;
+    -- Эмулируем realtime.messages, чтобы 0010_realtime.sql прошёл обе ветки.
+    create table if not exists realtime.messages (
+      id bigserial primary key, topic text, extension text, payload jsonb
+    );
   `);
 } catch (error) {
   console.error('check-migrations: не удалось подготовить окружение:', error);

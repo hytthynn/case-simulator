@@ -66,9 +66,12 @@ pnpm --filter @case-sim/web dev     # http://127.0.0.1:5173
 ```bash
 cp .env.example .env                # корневой .env НЕ коммитится
 cp apps/web/.env.example apps/web/.env   # только для production-сборки, в dev не нужен
+pnpm env:check                      # что заполнено, что ещё плейсхолдер (значения маскируются)
 ```
 
 Бот в dev сам подхватывает корневой `.env` (`--env-file-if-exists`); уже заданные в shell/Railway переменные имеют приоритет.
+
+> 🔴 **Безопасность:** токен бота — такой же секрет, как пароль. Не вставляйте его в `.env.example`, коммиты, чат или скриншот. Если токен уже где-то засветился — **@BotFather → `/revoke`**, он перевыпустит токен; старый перестанет работать. `.env.example` намеренно содержит только **пустые** значения: плейсхолдеры вида `<project-ref>` / `sb_secret_...` бот теперь тоже отвергает, а `env:check` и `deploy:check` их подсвечивают.
 
 | Переменная | Где взять |
 |---|---|
@@ -81,6 +84,36 @@ cp apps/web/.env.example apps/web/.env   # только для production-сбо
 | `DATABASE_URL`, `DATABASE_DIRECT_URL` | Supabase → Connect (pooler 6543 / direct 5432) |
 | `PORT`, `INIT_DATA_TTL_SECONDS`, `PRICE_SNAPSHOT_ID` | по умолчанию 3000 / 3600 / `2026-11-05-skinport` |
 | `VITE_*` | **только build-time**: `apps/web/.env` или env Cloudflare Pages; в JS-бандл секреты класть нельзя |
+
+#### Что именно вписать в каждое поле
+
+| Поле | Конкретное значение / команда |
+|---|---|
+| `TELEGRAM_BOT_TOKEN` | @BotFather → `/newbot`, строка вида `123456789:AA…`. **Только сервер.** |
+| `TELEGRAM_BOT_USERNAME` | имя бота **без `@`**, например `case_simulator_hytthynn_bot` |
+| `TELEGRAM_WEBHOOK_SECRET` | `openssl rand -hex 32`; в PowerShell: `[Convert]::ToHexString([Security.Cryptography.RandomNumberGenerator]::GetBytes(32)).ToLower()` |
+| `TELEGRAM_WEBHOOK_URL` | после создания сервиса Railway: **Settings → Networking → Generate Domain** → `https://<service>.up.railway.app/telegram/webhook`. Со своим доменом: `https://api.<domain>/telegram/webhook`. Путь обязателен, только HTTPS |
+| `TELEGRAM_USE_TEST_ENV` | `false` для прода; `true` → Bot API `/test/…` и тестовые звёзды (ставить вебхук тоже через `pnpm bot:webhook:set`) |
+| `SUPABASE_URL` | Dashboard → Project Settings → API → **Project URL**: `https://<ref>.supabase.co` |
+| `SUPABASE_PUBLISHABLE_KEY` | там же → **Publishable key** (`sb_publishable_…`), можно отдавать клиенту |
+| `SUPABASE_SECRET_KEY` | там же → **Secret key** (`sb_secret_…`), только Railway Secrets, обходит RLS |
+| `SUPABASE_JWT_JWK` | см. ниже — это самый часто пропускаемый шаг |
+| `DATABASE_URL` | Dashboard → Connect → **Transaction pooler** (`…:6543/postgres?pgbouncer=true`) — для сида каталога |
+| `DATABASE_DIRECT_URL` | Dashboard → Connect → **Direct connection** (`…:5432/postgres`) |
+| `VITE_*` | **не** в корневой `.env`; в `apps/web/.env` или build-time env Cloudflare Pages |
+
+**`SUPABASE_JWT_JWK` — три шага, иначе RLS не примет JWT:**
+
+```bash
+pnpm dlx supabase gen signing-key --algorithm ES256
+```
+
+1. Команда вернёт приватный JWK с полями `kty`, `kid`, `d`, `crv: "P-256"`, `x`, `y`. **Сразу сохраните его**: из Supabase приватный ключ извлечь нельзя.
+2. Supabase Dashboard → **Project Settings → JWT Signing Keys → Create standby key** → вставьте этот JWK (тот же `kid`).
+3. Нажмите **Rotate key**, чтобы ключ стал активным. Без импорта и ротации Supabase не доверит JWT, подписанный вашим ботом.
+4. В `.env`/секреты положите JWK **одной строкой JSON**; `deploy:check` проверит наличие `kid` и `d`.
+
+Проверить результат: `pnpm env:check` (локально, маскирует значения) и `pnpm deploy:check` (перед деплоем).
 
 ### Шаг 3 · Supabase (локальная БД)
 

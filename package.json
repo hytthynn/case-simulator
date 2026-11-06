@@ -22,7 +22,8 @@
     "bot:webhook:info": "node infra/scripts/set-webhook.mjs info",
     "bot:webhook:delete": "node infra/scripts/set-webhook.mjs delete",
     "setup:check": "pnpm lint && pnpm typecheck && pnpm test && pnpm docs:lint && pnpm build",
-    "deploy:check": "node infra/scripts/deploy-check.mjs"
+    "deploy:check": "node infra/scripts/deploy-check.mjs",
+    "env:check": "node infra/scripts/env-check.mjs"
   },
   "devDependencies": {
     "turbo": "2.11.10",

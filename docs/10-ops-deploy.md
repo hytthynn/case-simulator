@@ -44,6 +44,10 @@ supabase test db                     # pgTAP
 supabase gen signing-key --algorithm ES256
 ```
 
+**JWT Signing Keys (обязательно, иначе RLS откажет):** приватный ES256 JWK генерируется CLI только один раз — Supabase не позволяет извлечь приватный ключ после импорта. Поэтому: сгенерировать → сохранить в Secrets → Dashboard **Project Settings → JWT Signing Keys → Create standby key** (вставить JWK с тем же `kid`) → **Rotate key**. JWK хранится в `SUPABASE_JWT_JWK` **одной строкой JSON** и обязан содержать `kid` и `d`; `pnpm deploy:check` это проверяет. При ротации учитывать кэш JWKS до ~20 минут.
+
+**Секреты:** если токен бота, `sb_secret_…` или JWK где-то засветились (скриншот, чат, коммит) — немедленно перевыпустить: для бота @BotFather → `/revoke`, для Supabase — ротация ключей. `.env.example` содержит только пустые значения, `pnpm env:check` маскирует значения при проверке.
+
 ---
 
 ## 3. Railway

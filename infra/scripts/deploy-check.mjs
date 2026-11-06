@@ -26,10 +26,14 @@ if (existsSync(envFile)) {
   }
 }
 
+const isPlaceholder = (v) => v === '' || /<[^>]+>|\.\.\.|example\.com|your[-_]?domain|project-ref/i.test(v);
+
 function check(name, { required = true, validate, hint }) {
   const value = (process.env[name] ?? '').trim();
-  if (!value) {
-    (required ? errors : warnings).push(`${name}: не задан${hint ? ` — ${hint}` : ''}`);
+  if (isPlaceholder(value)) {
+    (required ? errors : warnings).push(
+      `${name}: ${value ? `плейсхолдер «${value}»` : 'не задан'}${hint ? ` — ${hint}` : ''}`,
+    );
     return;
   }
   const problem = validate?.(value);

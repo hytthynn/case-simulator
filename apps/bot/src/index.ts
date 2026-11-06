@@ -1,17 +1,16 @@
 import { serve } from '@hono/node-server';
 import { createJwtSigner } from './auth/jwt.js';
 import { createApp } from './app.js';
-import { isProductionReady, loadEnv } from './env.js';
+import { hasSupabaseConfig, isProductionReady, loadEnv } from './env.js';
 import { createMemoryDb } from './lib/memory-db.js';
 import { createSupabaseDb } from './lib/supabase-db.js';
 import { createTelegramPort } from './telegram/port.js';
 
 const env = loadEnv();
 const jwt = await createJwtSigner(env.SUPABASE_JWT_JWK);
-const db =
-  env.SUPABASE_URL && env.SUPABASE_SECRET_KEY
-    ? createSupabaseDb(env.SUPABASE_URL, env.SUPABASE_SECRET_KEY)
-    : createMemoryDb();
+const db = hasSupabaseConfig(env)
+  ? createSupabaseDb(env.SUPABASE_URL, env.SUPABASE_SECRET_KEY)
+  : createMemoryDb();
 const telegram = createTelegramPort(env);
 const app = createApp({ env, db, telegram, jwt });
 
@@ -24,7 +23,7 @@ const server = serve(
         event: 'server_started',
         port: info.port,
         version: env.VERSION,
-        mode: env.SUPABASE_URL && env.SUPABASE_SECRET_KEY ? 'supabase' : 'memory-dev',
+        mode: hasSupabaseConfig(env) ? 'supabase' : 'memory-dev',
         production_ready: isProductionReady(env),
       }),
     );

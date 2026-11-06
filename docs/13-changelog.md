@@ -15,6 +15,8 @@
 - **`apps/bot`** — Hono REST v1 + grammY: валидация `initData` (HMAC/TTL/anti-replay), ES256 JWT, `/health`, `/time`, `/catalog/*`, `/auth/telegram`, `/me`, `/cases/open`, `/inventory/sell`, `/payments/invoice`, webhook Stars (`pre_checkout_query` ≤10 с, выдача **только** на `successful_payment`, `refunded_payment`), единый формат ошибок, rate limits. In-memory адаптер для dev без Supabase, unit/интеграционные тесты.
 - **`apps/web`** — Vite + React 19 + Tailwind CSS 4 SPA: TMA-bootstrap, 5 нижних табов, шапка с балансом/уровнем, каталог кейсов 3-в-ряд, открытие кейса с серверным результатом, инвентарь/контракты/игры/магазин, 18+ дисклеймер, оффлайн-баннер, i18n, `prefers-reduced-motion`, загрузочные экраны.
 - **CI/CD и infra** — `ci.yml` (lint/typecheck/test/docs-lint/build/pgTAP), `docs-lint.yml`, `deploy.yml` (без секретов деплой пропускается), PR-шаблон, Railway `Dockerfile`/`railway.toml`, Cloudflare `_headers`/`wrangler.toml`, `docs-lint.mjs`, `verify-seed.mjs`, `verify-assets.mjs`, алерты.
+- **Настройка и запуск** — `README.md` → пошаговый раздел «Запуск и настройка» (demo без ключей, `.env`, Supabase, @BotFather, Railway/Cloudflare, проверка, troubleshooting). `apps/bot dev` автоматически читает корневой `.env` (`--env-file-if-exists`), `apps/web/.env.example` для `VITE_*`, `pnpm setup:check`.
+- **Скрипты** — `infra/scripts/set-webhook.mjs` (`pnpm bot:webhook:set|info|delete`: `secret_token`, `allowed_updates`, test-окружение, без вывода токена) и `infra/scripts/copy-headers.mjs` (CSP `_headers` автоматически попадает в `apps/web/dist` при сборке).
 
 ### Изменено
 - **ADR-006** — старт этапа 1 на interim-допущениях §5 `14-open-questions.md`; Q-01/Q-02/Q-03 остаются блокерами деплоя и релиза (ADR-006).

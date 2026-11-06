@@ -6,7 +6,7 @@
   "description": "Telegram Mini App SPA (Vite + React 19 + Tailwind CSS 4)",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
-    "build": "vite build",
+    "build": "node ../../infra/scripts/copy-headers.mjs && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "lint": "tsc --noEmit -p tsconfig.json",

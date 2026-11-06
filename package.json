@@ -17,7 +17,11 @@
     "contract:check": "pnpm typecheck",
     "docs:lint": "node infra/scripts/docs-lint.mjs",
     "db:seed:generate": "node infra/scripts/import-prices.mjs",
-    "assets:verify": "node infra/scripts/verify-assets.mjs"
+    "assets:verify": "node infra/scripts/verify-assets.mjs",
+    "bot:webhook:set": "node infra/scripts/set-webhook.mjs set",
+    "bot:webhook:info": "node infra/scripts/set-webhook.mjs info",
+    "bot:webhook:delete": "node infra/scripts/set-webhook.mjs delete",
+    "setup:check": "pnpm lint && pnpm typecheck && pnpm test && pnpm docs:lint && pnpm build"
   },
   "devDependencies": {
     "turbo": "2.11.10",

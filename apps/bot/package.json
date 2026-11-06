@@ -6,7 +6,7 @@
   "description": "Railway: Hono REST v1 + grammY Telegram bot + Stars XTR webhook",
   "main": "dist/index.js",
   "scripts": {
-    "dev": "tsx watch src/index.ts",
+    "dev": "tsx watch --env-file-if-exists=../../.env src/index.ts",
     "start": "node dist/index.js",
     "build": "tsup",
     "typecheck": "tsc --noEmit -p tsconfig.json",

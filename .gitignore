@@ -27,6 +27,8 @@ secrets/
 supabase/.temp/
 # Генерируется pnpm db:seed:generate из docs/reference/
 supabase/seed-data.sql
+# Генерируется infra/scripts/copy-headers.mjs перед vite build
+apps/web/public/_headers
 .railway/
 railway.json.bak
 

@@ -128,7 +128,9 @@ jobs:
 /catalog/*
   Cache-Control: public, max-age=31536000, immutable
 ```
+Источник — [`infra/cloudflare/_headers`](../infra/cloudflare/_headers). Перед `vite build` скрипт `infra/scripts/copy-headers.mjs` копирует его в `apps/web/public/`, откуда Vite кладёт файл в корень `dist/` (иначе Cloudflare Pages его не увидит). Перед продом заменить плейсхолдеры origin-ов на реальные (Q-16).
 - `index.html`: `<script src="https://telegram.org/js/telegram-web-app.js?64"></script>` **в `<head>` до остальных скриптов**.
+- **Вебхук бота** ставится командой `pnpm bot:webhook:set` ([`infra/scripts/set-webhook.mjs`](../infra/scripts/set-webhook.mjs)): читает `.env`, передаёт `secret_token` и `allowed_updates`, поддерживает `TELEGRAM_USE_TEST_ENV=true` (`/test/setWebhook`). Проверка — `pnpm bot:webhook:info`, снятие — `pnpm bot:webhook:delete`. URL обязан заканчиваться на `/telegram/webhook`.
 - Для скачиваний: `Content-Disposition: attachment` + `Access-Control-Allow-Origin: https://web.telegram.org`.
 - Ассеты каталога: Supabase Storage + CDN; `infra/scripts/verify-assets.ts` проверяет 404 по всему каталогу.
 

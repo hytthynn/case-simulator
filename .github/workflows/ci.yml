@@ -41,6 +41,9 @@ jobs:
       - name: SQL migrations (PGlite, без Docker)
         run: pnpm db:check
 
+      - name: pgTAP assertions (PGlite, без Docker)
+        run: pnpm db:pgtap
+
       - name: Docs lint
         run: pnpm docs:lint
 

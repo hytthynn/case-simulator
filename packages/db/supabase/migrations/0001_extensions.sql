@@ -57,5 +57,16 @@ as $$
   )::bigint
 $$;
 
+-- RLS-политики вызывают auth.jwt() ОТ ИМЕНИ authenticated/anon, поэтому
+-- права нужны явно: на некоторых сборках Supabase/local дефолтных grants нет.
+grant usage on schema auth to anon, authenticated, service_role;
+do $$
+begin
+  if to_regprocedure('auth.jwt()') is not null then
+    execute 'grant execute on function auth.jwt() to anon, authenticated, service_role';
+  end if;
+end
+$$;
+
 revoke all on function public.current_telegram_user_id() from public;
 grant execute on function public.current_telegram_user_id() to authenticated, service_role;

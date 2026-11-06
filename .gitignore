@@ -1,0 +1,66 @@
+# dependencies
+node_modules/
+.pnpm-store/
+.turbo/
+.parcel-cache/
+
+# builds
+dist/
+build/
+.vite/
+out/
+*.tsbuildinfo
+coverage/
+.eslintcache
+
+# env & secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.jwk
+secrets/
+
+# supabase / railway local state
+.supabase/
+supabase/.temp/
+# Генерируется pnpm db:seed:generate из docs/reference/
+supabase/seed-data.sql
+.railway/
+railway.json.bak
+
+# source artifacts — НЕ коммитим эталоны
+*.apk
+*.apks
+*.MP4
+*.mp4
+*.aab
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+game_state.json
+cloud_restore_backup.db
+
+# logs / dumps / temp
+logs/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+tmp/
+temp/
+*.tmp
+.DS_Store
+Thumbs.db
+__pycache__/
+*.pyc
+
+# IDE
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.example.json
+
+# project data (never delete)
+.workbuddy-ai/

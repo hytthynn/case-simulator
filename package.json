@@ -16,17 +16,20 @@
     "test:unit": "turbo run test",
     "contract:check": "pnpm typecheck",
     "docs:lint": "node infra/scripts/docs-lint.mjs",
+    "db:check": "node infra/scripts/check-migrations.mjs",
     "db:seed:generate": "node infra/scripts/import-prices.mjs",
     "assets:verify": "node infra/scripts/verify-assets.mjs",
     "assets:upload": "node infra/scripts/upload-assets.mjs",
     "bot:webhook:set": "node infra/scripts/set-webhook.mjs set",
     "bot:webhook:info": "node infra/scripts/set-webhook.mjs info",
     "bot:webhook:delete": "node infra/scripts/set-webhook.mjs delete",
-    "setup:check": "pnpm lint && pnpm typecheck && pnpm test && pnpm docs:lint && pnpm build",
+    "setup:check": "pnpm lint && pnpm typecheck && pnpm test && pnpm docs:lint && pnpm db:check && pnpm build",
     "deploy:check": "node infra/scripts/deploy-check.mjs",
-    "env:check": "node infra/scripts/env-check.mjs"
+    "env:check": "node infra/scripts/env-check.mjs",
+    "env:sync": "node infra/scripts/sync-web-env.mjs"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "0.5.15",
     "turbo": "2.11.10",
     "typescript": "5.9.3",
     "vitest": "3.2.7"

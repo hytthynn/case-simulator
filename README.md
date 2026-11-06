@@ -67,6 +67,7 @@ pnpm --filter @case-sim/web dev     # http://127.0.0.1:5173
 cp .env.example .env                # корневой .env НЕ коммитится
 cp apps/web/.env.example apps/web/.env   # только для production-сборки, в dev не нужен
 pnpm env:check                      # что заполнено, что ещё плейсхолдер (значения маскируются)
+pnpm env:sync                       # вывести VITE_* из корневого .env в apps/web/.env
 ```
 
 Бот в dev сам подхватывает корневой `.env` (`--env-file-if-exists`); уже заданные в shell/Railway переменные имеют приоритет.
@@ -119,7 +120,7 @@ pnpm dlx supabase gen signing-key --algorithm ES256
 
 **В локальном dev оставьте файл полностью закомментированным** — это правильно: `vite.config.ts` проксирует `/v1` и `/health` на `http://127.0.0.1:3000`. Если раскомментировать `VITE_API_BASE_URL`, прокси обойдётся и каталог станет пустым.
 
-Для production раскомментируйте (или, что надёжнее, задайте как **build-time env в Cloudflare Pages** — `apps/web/.env` в `.gitignore` и до CI не доедет):
+Для production запустите `pnpm env:sync` — он сам выведет все значения из корневого `.env` (`VITE_API_BASE_URL` из `TELEGRAM_WEBHOOK_URL`, CDN из `SUPABASE_URL` + Storage) и запишет `apps/web/.env`. Либо задайте их как **build-time env в Cloudflare Pages** — `apps/web/.env` в `.gitignore` и до CI не доедет:
 
 | Поле | Значение | Зачем |
 |---|---|---|
@@ -216,7 +217,8 @@ pnpm deploy:check
 ### Шаг 6 · Проверка
 
 ```bash
-pnpm setup:check                     # lint + typecheck + test + docs:lint + build
+pnpm setup:check                     # lint + typecheck + test + docs:lint + db:check + build
+pnpm db:check                        # все 12 миграций в PGlite без Docker
 pnpm docs:lint                       # ссылки, AGENTS.md ≤200 строк, отсутствие секретов
 curl https://api.<domain>/health     # ожидается production_ready: true
 pnpm bot:webhook:info                # last_error_message: нет

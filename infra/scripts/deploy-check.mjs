@@ -17,12 +17,13 @@ const errors = [];
 const warnings = [];
 const ok = [];
 
-const envFile = resolve(ROOT, '.env');
-if (existsSync(envFile)) {
+for (const envFile of [resolve(ROOT, '.env'), resolve(ROOT, 'apps/web/.env')]) {
+  if (!existsSync(envFile)) continue;
   try {
+    // loadEnvFile не переопределяет уже заданные переменные (приоритет CI/secrets).
     process.loadEnvFile(envFile);
   } catch {
-    errors.push('Не удалось прочитать .env (проверьте синтаксис)');
+    errors.push(`Не удалось прочитать ${envFile.replace(ROOT, '')} (проверьте синтаксис)`);
   }
 }
 

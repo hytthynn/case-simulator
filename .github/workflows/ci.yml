@@ -38,6 +38,9 @@ jobs:
       - name: Migration / seed static checks
         run: pnpm --filter @case-sim/db test
 
+      - name: SQL migrations (PGlite, без Docker)
+        run: pnpm db:check
+
       - name: Docs lint
         run: pnpm docs:lint
 
@@ -54,7 +57,9 @@ jobs:
         run: pnpm audit --audit-level=high || true
 
   database:
-    runs-on: ubuntu-latest
+    # ubuntu-latest уже указывает на Ubuntu 26; Supabase CLI + Docker там
+    # нестабильны. Фиксируем 24.04 до официальной поддержки.
+    runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
@@ -70,8 +75,11 @@ jobs:
           version: latest
       - run: pnpm install --frozen-lockfile
       - run: pnpm db:seed:generate
-      - name: Postgres migrations + pgTAP (RLS, idempotency)
-        run: |
-          supabase start
-          supabase db reset
-          supabase test db
+      - name: Supabase CLI version
+        run: supabase --version
+      - name: Start local Supabase (Docker)
+        run: supabase start
+      - name: Apply migrations + seed
+        run: supabase db reset
+      - name: pgTAP (RLS, idempotency)
+        run: supabase test db

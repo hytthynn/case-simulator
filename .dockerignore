@@ -1,0 +1,37 @@
+# Контекст Railway/Docker: без этого в сборку уедут 141 MB MP4, 81 MB APKS,
+# node_modules хоста и dist — билд будет медленным или упадёт.
+.git
+.github
+.workbuddy-ai
+.idea
+.vscode
+node_modules
+**/node_modules
+dist
+**/dist
+.turbo
+coverage
+*.log
+*.tmp
+
+# Секреты и локальные файлы НЕ должны попадать в образ
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets/
+
+# Тяжёлые эталоны и артефакты
+*.apks
+*.apk
+*.aab
+*.MP4
+*.mp4
+*.db
+*.sqlite
+*.sqlite3
+docs/
+supabase/
+infra/cloudflare/
+infra/monitoring/

@@ -1,11 +1,13 @@
 FROM node:22-alpine AS build
 WORKDIR /app
-RUN corepack enable && corepack prepare pnpm@10.34.9 --activate
+# Node 25+ не поставляет Corepack, поэтому ставим pnpm явно и фиксируем версию.
+RUN npm install -g pnpm@10.34.9
 
-# Только то, что нужно для сборки бота (workspace-пакет shared).
+# Копируем ВСЕ package.json воркспейса, чтобы pnpm-lock.yaml оставался консистентным
+# при `pnpm install --frozen-lockfile --filter`. Тяжёлые файлы отсекает .dockerignore.
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json turbo.json tsconfig.base.json .npmrc ./
 COPY packages ./packages
-COPY apps/bot ./apps/bot
+COPY apps ./apps
 
 RUN pnpm install --frozen-lockfile --filter @case-sim/bot... \
  && pnpm --filter @case-sim/bot build

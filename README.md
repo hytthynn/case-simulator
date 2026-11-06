@@ -115,11 +115,31 @@ pnpm --filter @case-sim/db types     # сгенерировать packages/db/sr
 
 ### Шаг 5 · Деплой
 
-**Railway** (бот/API): Dockerfile — `infra/railway/Dockerfile`, region `europe-west4-drams3a`, healthcheck `GET /health`, слушатель `0.0.0.0:$PORT`. Все серверные переменные из шага 2 задайте в Service Variables; `VITE_*` и `.env` туда не копируйте.
+**Сначала — preflight.** Он честно скажет, чего не хватает, и не даст задеплоить пустую конфигурацию:
 
-**Cloudflare Pages** (SPA): build `pnpm install --frozen-lockfile && pnpm --filter @case-sim/web build`, output `apps/web/dist`. Задайте build-time `VITE_API_BASE_URL`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, `VITE_CDN_BASE_URL`. Перед сборкой `copy-headers.mjs` автоматически кладёт `infra/cloudflare/_headers` в `public/` → `dist/_headers`; **замените в нём плейсхолдеры** `api.example.com`, `*.supabase.co`, `*.fly.dev` на реальные origin-ы (Q-16).
+```bash
+pnpm deploy:check
+```
 
-Порядок: CI → `supabase db push` (pre-deploy) → Railway → Cloudflare Pages → smoke-тесты. `deploy.yml` без секретов деплой пропускает.
+| Куда | Что задать |
+|---|---|
+| GitHub **Secrets** | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`, `SUPABASE_ACCESS_TOKEN`, `SUPABASE_DB_PASSWORD`, `SUPABASE_SECRET_KEY`, `SUPABASE_JWT_JWK`, `DATABASE_URL`, `CLOUDFLARE_API_TOKEN` |
+| GitHub **Variables** | `HEALTHCHECK_URL`, `TELEGRAM_WEBHOOK_URL`, `TELEGRAM_BOT_USERNAME`, `TELEGRAM_USE_TEST_ENV`, `SUPABASE_URL`, `SUPABASE_PROJECT_ID`, `SUPABASE_PUBLISHABLE_KEY`, `VITE_*`, `CLOUDFLARE_ACCOUNT_ID` |
+| Railway Service Variables | **все серверные** переменные из шага 2; `PORT` инжектится сам. `VITE_*` и `.env` не копировать |
+| Cloudflare Pages (build env) | `VITE_API_BASE_URL`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, `VITE_CDN_BASE_URL` |
+
+**Railway** (бот/API): подключите репозиторий, укажите `infra/railway/Dockerfile`, регион `europe-west4-drams3a`, healthcheck `GET /health`, `Wait for CI`. `.dockerignore` не даёт утащить в контекст MP4/APKS/`node_modules`.
+
+**Cloudflare Pages** (SPA): build `pnpm install --frozen-lockfile && pnpm --filter @case-sim/web build`, output `apps/web/dist` (задано в `wrangler.toml`). CSP редактировать вручную **не нужно**: `copy-headers.mjs` подставляет `{{API_ORIGIN}}`/`{{SUPABASE_ORIGIN}}`/`{{CDN_ORIGIN}}` из `VITE_*` и кладёт `_headers` в `dist/`; в деплойной сборке `build:deploy` незакрытые токены = ошибка.
+
+**Порядок первого деплоя:**
+1. Создать Supabase project (Pro, EU), `supabase gen signing-key --algorithm ES256` → JWK с `kid` в секреты.
+2. В BotFather задать команды и Main Mini App на `https://app.<domain>`, включить Stars/2FA.
+3. Запустить `deploy.yml` → **Actions → Run workflow → `seed_catalog=true`**. Это важно: `supabase db push` применяет только миграции, а каталог (14 945 предметов, 241 кейс, SKU, флаги) грузится отдельным шагом `psql -f supabase/seed.sql`. Повторять не обязательно.
+4. Workflow: `deploy:check` → CI-гейт → миграции → сид → сборка SPA → Pages → ожидание `production_ready: true` от Railway → `bot:webhook:set` → smoke.
+5. Проверить `pnpm bot:webhook:info` (`last_error_message: нет`) и открыть Mini App из бота.
+
+Без ключевых секретов `deploy.yml` пропускает деплой с warning и остаётся зелёным. Если `CLOUDFLARE_API_TOKEN` не задан, Pages деплоится своей Git-интеграцией. Подробности — [`docs/10-ops-deploy.md`](docs/10-ops-deploy.md) §5.1.
 
 ### Шаг 6 · Проверка
 
@@ -139,6 +159,10 @@ pnpm bot:webhook:info                # last_error_message: нет
 | `pnpm` / `corepack` «не распознано как имя командлета» | Node.js 25+ без Corepack и без глобального pnpm → `npm i -g pnpm@10.34.9`, затем перезапустить терминал |
 | Каталог пуст в браузере | бот не запущен на `:3000` или в dev задан `VITE_API_BASE_URL` |
 | `production_ready: false` | не хватает `BOT_TOKEN` / webhook secret / Supabase URL+key / JWK (Q-01, Q-02) |
+| `pnpm deploy:check` красный | смотрите список `✗`: незаполненные переменные, JWK без `kid`, не-HTTPS webhook |
+| Пустой каталог в проде | `supabase db push` не грузит сид → запустить workflow с `seed_catalog=true` |
+| CSP блокирует API/картинки в проде | `VITE_*` не заданы на этапе **сборки** SPA (а не в рантайме Railway) |
+| `getWebhookInfo` показывает `last_error_message` | Railway не отвечает на `/telegram/webhook`, неверный secret или не HTTPS |
 | `401 INVALID_INIT_DATA` | открыто из обычного браузера, а не из Telegram; либо истёк TTL 3600 с |
 | `INSUFFICIENT_BALANCE` | стартовый баланс $10 (interim Q-07), цена кейса выше |
 | Ошибка `supabase db reset` | забыли `pnpm db:seed:generate` (нет `seed-data.sql`) |

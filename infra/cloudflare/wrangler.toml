@@ -1,10 +1,11 @@
 name = "case-sim-web"
 compatibility_date = "2026-11-06"
+# Важно: Pages публикует именно эту папку. `copy-headers.mjs` кладёт сюда _headers.
+pages_build_output_dir = "apps/web/dist"
 
-# Cloudflare Pages: SPA собирается `pnpm --filter @case-sim/web build`,
-# артефакт apps/web/dist, заголовки CSP — infra/cloudflare/_headers.
+# Cloudflare Pages: pnpm ставим явно (в образе сборщика может не быть Corepack).
 [build]
-command = "pnpm install --frozen-lockfile && pnpm --filter @case-sim/web build"
+command = "npm install -g pnpm@10.34.9 && pnpm install --frozen-lockfile && pnpm --filter @case-sim/web build:deploy"
 
 [env.staging]
 name = "case-sim-web-staging"

@@ -1,7 +1,7 @@
 name: Deploy (staging / prod)
 
 # Реальный деплой требует закрытых Q-01/Q-02 (BOT_TOKEN, домены, доступы).
-# Workflow намеренно не выполняет сетевых шагов без секретов.
+# Без ключевых секретов job пропускается и остаётся зелёным: CI + docs-lint.
 on:
   workflow_dispatch:
     inputs:
@@ -9,33 +9,61 @@ on:
         description: 'staging | prod'
         required: true
         default: 'staging'
+        type: string
+      seed_catalog:
+        description: 'Загрузить каталог цен/кейсов в БД (первый деплой, D-04)'
+        type: boolean
+        default: false
   push:
     branches: [main]
 
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
-  predeploy:
+  preflight:
     runs-on: ubuntu-latest
     outputs:
-      ready: ${{ steps.check.outputs.ready }}
+      ready: ${{ steps.gate.outputs.ready }}
     steps:
-      - uses: actions/checkout@v4
-      - id: check
+      - id: gate
         env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          HEALTHCHECK_URL: ${{ vars.HEALTHCHECK_URL }}
         run: |
-          if [ -n "$RAILWAY_TOKEN" ] && [ -n "$SUPABASE_ACCESS_TOKEN" ]; then
+          if [ -n "$TELEGRAM_BOT_TOKEN" ] && [ -n "$SUPABASE_ACCESS_TOKEN" ] && [ -n "$HEALTHCHECK_URL" ]; then
             echo "ready=true" >> "$GITHUB_OUTPUT"
           else
             echo "ready=false" >> "$GITHUB_OUTPUT"
-            echo "::warning::Q-01/Q-02 не закрыты: деплой пропущен, CI и docs-lint выполнены"
+            echo "::warning::Q-01/Q-02 не закрыты — нужны secrets TELEGRAM_BOT_TOKEN, SUPABASE_ACCESS_TOKEN и variable HEALTHCHECK_URL. Деплой пропущен."
           fi
 
   deploy:
-    needs: predeploy
-    if: needs.predeploy.outputs.ready == 'true'
+    needs: preflight
+    if: needs.preflight.outputs.ready == 'true'
     runs-on: ubuntu-latest
-    environment: ${{ github.event.inputs.environment || 'staging' }}
+    timeout-minutes: 30
+    environment: ${{ inputs.environment || 'staging' }}
+    env:
+      # --- серверные секреты (Railway / Supabase / Telegram) ---
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_BOT_USERNAME: ${{ vars.TELEGRAM_BOT_USERNAME }}
+      TELEGRAM_WEBHOOK_SECRET: ${{ secrets.TELEGRAM_WEBHOOK_SECRET }}
+      TELEGRAM_WEBHOOK_URL: ${{ vars.TELEGRAM_WEBHOOK_URL }}
+      TELEGRAM_USE_TEST_ENV: ${{ vars.TELEGRAM_USE_TEST_ENV || 'false' }}
+      SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+      SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+      SUPABASE_PUBLISHABLE_KEY: ${{ vars.SUPABASE_PUBLISHABLE_KEY }}
+      SUPABASE_JWT_JWK: ${{ secrets.SUPABASE_JWT_JWK }}
+      # --- build-time переменные SPA (попадают в бандл, это НЕ секреты) ---
+      VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
+      VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+      VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
+      VITE_CDN_BASE_URL: ${{ vars.VITE_CDN_BASE_URL }}
+      HEALTHCHECK_URL: ${{ vars.HEALTHCHECK_URL }}
+      CF_TOKEN_PRESENT: ${{ secrets.CLOUDFLARE_API_TOKEN != '' }}
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -49,16 +77,67 @@ jobs:
         with:
           version: latest
       - run: pnpm install --frozen-lockfile
-      - run: pnpm lint && pnpm typecheck && pnpm test && pnpm docs:lint
+
+      - name: Preflight конфигурации (Q-01/Q-02, CSP, отсутствие секретов в git)
+        run: pnpm deploy:check
+
+      - name: CI gate
+        run: pnpm lint && pnpm typecheck && pnpm test && pnpm docs:lint
+
+      - name: Сгенерировать снимок цен (D-04)
+        run: pnpm db:seed:generate
+
       # Миграции — в pre-deploy, НЕ в build-фазе (private network недоступна при сборке).
       - name: Supabase migrations
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
-          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
-        run: supabase link --project-ref "$SUPABASE_PROJECT_ID" && supabase db push
-      - name: Build SPA
-        run: pnpm --filter @case-sim/web build
-      # Railway и Cloudflare деплоятся собственными GitHub-интеграциями (Wait for CI).
+          SUPABASE_PROJECT_ID: ${{ vars.SUPABASE_PROJECT_ID }}
+        run: |
+          supabase link --project-ref "$SUPABASE_PROJECT_ID"
+          supabase db push
+
+      # `supabase db push` НЕ применяет seed.sql. Каталог (14 945 предметов,
+      # 241 кейс, SKU, флаги) грузится отдельно; все INSERT идемпотентны.
+      - name: Seed catalog (первый деплой)
+        if: ${{ inputs.seed_catalog == true }}
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          if ! command -v psql >/dev/null; then
+            sudo apt-get update && sudo apt-get install -y postgresql-client
+          fi
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/seed.sql
+
+      - name: Build SPA (CSP strict)
+        run: pnpm --filter @case-sim/web build:deploy
+
+      - name: Deploy SPA → Cloudflare Pages
+        if: ${{ env.CF_TOKEN_PRESENT == 'true' }}
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          pnpm dlx wrangler@4 pages deploy apps/web/dist \
+            --project-name case-sim-web \
+            --branch "${{ inputs.environment == 'prod' && 'main' || 'staging' }}"
+
+      # Railway деплоится своей GitHub-интеграцией (Wait for CI). Ждём готовности API.
+      - name: Wait for Railway /health
+        run: |
+          for i in $(seq 1 30); do
+            if curl -fsS "$HEALTHCHECK_URL/health" | grep -q '"production_ready":true'; then
+              echo "API готов"; exit 0
+            fi
+            echo "попытка $i/30..."; sleep 10
+          done
+          echo "::error::API не стал production_ready за 5 минут"; exit 1
+
+      - name: Установить вебхук Telegram
+        run: pnpm bot:webhook:set && pnpm bot:webhook:info
+
       - name: Smoke check
-        run: echo "Deploy delegated to Railway/Cloudflare integrations; see docs/10-ops-deploy.md"
+        run: |
+          curl -fsS "$HEALTHCHECK_URL/health"
+          curl -fsS "$HEALTHCHECK_URL/v1/time"
+          curl -fsS "$HEALTHCHECK_URL/v1/catalog/cases?limit=1" | grep -q '"items"'

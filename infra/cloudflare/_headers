@@ -1,5 +1,11 @@
+# Шаблон CSP. Токены подставляются infra/scripts/copy-headers.mjs из build-time env:
+#   {{API_ORIGIN}}          ← VITE_API_BASE_URL
+#   {{SUPABASE_ORIGIN}}     ← VITE_SUPABASE_URL
+#   {{WS_SUPABASE_ORIGIN}}  ← тот же origin, схема wss://
+#   {{CDN_ORIGIN}}          ← VITE_CDN_BASE_URL
+# Редактировать вручную НЕ нужно; в CI незакрытые токены считаются ошибкой.
 /*
-  Content-Security-Policy: default-src 'self'; script-src 'self' https://telegram.org; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.example.com; img-src 'self' data: https://*.supabase.co https://*.fly.dev; frame-ancestors https://web.telegram.org https://t.me; base-uri 'none'; object-src 'none'
+  Content-Security-Policy: default-src 'self'; script-src 'self' https://telegram.org; connect-src 'self' {{API_ORIGIN}} {{SUPABASE_ORIGIN}} {{WS_SUPABASE_ORIGIN}}; img-src 'self' data: {{SUPABASE_ORIGIN}} {{CDN_ORIGIN}}; frame-ancestors https://web.telegram.org https://t.me; base-uri 'none'; object-src 'none'
   X-Content-Type-Options: nosniff
   Referrer-Policy: no-referrer
   Permissions-Policy: camera=(), microphone=(), geolocation=()

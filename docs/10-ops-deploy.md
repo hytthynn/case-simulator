@@ -110,7 +110,21 @@ jobs:
   visual:      Playwright снапшоты против docs/reference/screenshots
   security:    pnpm audit, grep секретов в dist, проверка CSP
 ```
-`deploy.yml`: `Wait for CI` → `supabase db push` (pre-deploy) → Railway deploy → Cloudflare Pages deploy → smoke-тесты → алерт.
+### 5.1 `deploy.yml` (фактический порядок)
+
+1. **preflight** — без `TELEGRAM_BOT_TOKEN`, `SUPABASE_ACCESS_TOKEN` и variable `HEALTHCHECK_URL` job пропускается с warning (Q-01/Q-02).
+2. **`pnpm deploy:check`** — проверяет все переменные, формат приватного ES256 JWK (в т.ч. `kid`), HTTPS и путь `/telegram/webhook`, отсутствие `.env`/`seed-data.sql` в git, CSP-токены. Секреты не выводятся.
+3. CI-гейт: `lint && typecheck && test && docs:lint`.
+4. `pnpm db:seed:generate` → `supabase link && supabase db push` (миграции, **pre-deploy**).
+5. **Сид каталога — отдельным шагом**: `supabase db push` НЕ выполняет `seed.sql`. На первом деплое запустить workflow с `seed_catalog=true`: `psql "$DATABASE_URL" -f supabase/seed.sql` загрузит 14 945 предметов, 241 кейс, SKU, флаги и `level_curve`. Все `INSERT` идемпотентны (`ON CONFLICT DO NOTHING`), повтор безопасен.
+6. Сборка SPA с `VITE_*` → `wrangler pages deploy apps/web/dist` (если задан `CLOUDFLARE_API_TOKEN`), иначе деплой через Git-интеграцию Cloudflare.
+7. Railway деплоится своей Git-интеграцией (`Wait for CI`); workflow ждёт `GET /health` → `production_ready: true` до 5 минут.
+8. `pnpm bot:webhook:set` → `bot:webhook:info` → smoke (`/health`, `/v1/time`, `/v1/catalog/cases`).
+
+GitHub **Secrets**: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`, `SUPABASE_ACCESS_TOKEN`, `SUPABASE_DB_PASSWORD`, `SUPABASE_SECRET_KEY`, `SUPABASE_JWT_JWK`, `DATABASE_URL`, `CLOUDFLARE_API_TOKEN`.
+GitHub **Variables** (не секреты): `HEALTHCHECK_URL`, `TELEGRAM_WEBHOOK_URL`, `TELEGRAM_BOT_USERNAME`, `TELEGRAM_USE_TEST_ENV`, `SUPABASE_URL`, `SUPABASE_PROJECT_ID`, `SUPABASE_PUBLISHABLE_KEY`, `VITE_*`, `CLOUDFLARE_ACCOUNT_ID`.
+
+**Важно:** Railway Service Variables должны содержать тот же набор серверных переменных; `VITE_*` и `.env` туда не копировать. `SUPABASE_JWT_JWK` берётся из `supabase gen signing-key --algorithm ES256` и обязан содержать `kid`, иначе Supabase не примет JWT и RLS откажет. `.dockerignore` исключает MP4/APKS/node_modules из контекста сборки Railway.
 
 **Откат:** Railway — предыдущий деплой; миграции — только forward-compatible (никогда не дропать колонки в том же релизе); SPA — откат к предыдущему immutable-бандлу.
 
@@ -119,16 +133,12 @@ jobs:
 ## 6. Фронтенд-хостинг
 
 - **Cloudflare Pages** (или Vercel): глобальный CDN, immutable-кэш ассетов, собственный домен → стабильный origin для Bot API 10.2 (запрет вызова Mini App-методов с других origin).
-- `_headers`:
+- `_headers` — шаблон с токенами (источник [`infra/cloudflare/_headers`](../infra/cloudflare/_headers)):
 ```
-/*
-  Content-Security-Policy: default-src 'self'; script-src 'self' https://telegram.org; connect-src 'self' https://<ref>.supabase.co wss://<ref>.supabase.co https://api.<domain>; img-src 'self' data: https://<cdn>; frame-ancestors https://web.telegram.org https://t.me; base-uri 'none'
-  X-Content-Type-Options: nosniff
-  Referrer-Policy: no-referrer
-/catalog/*
-  Cache-Control: public, max-age=31536000, immutable
+Content-Security-Policy: ... connect-src 'self' {{API_ORIGIN}} {{SUPABASE_ORIGIN}} {{WS_SUPABASE_ORIGIN}}; img-src 'self' data: {{SUPABASE_ORIGIN}} {{CDN_ORIGIN}}; frame-ancestors https://web.telegram.org https://t.me ...
 ```
-Источник — [`infra/cloudflare/_headers`](../infra/cloudflare/_headers). Перед `vite build` скрипт `infra/scripts/copy-headers.mjs` копирует его в `apps/web/public/`, откуда Vite кладёт файл в корень `dist/` (иначе Cloudflare Pages его не увидит). Перед продом заменить плейсхолдеры origin-ов на реальные (Q-16).
+`infra/scripts/copy-headers.mjs` перед `vite build` подставляет реальные origin-ы из `VITE_API_BASE_URL`, `VITE_SUPABASE_URL`, `VITE_CDN_BASE_URL` и кладёт файл в `apps/web/public/` → `dist/_headers` (иначе Cloudflare Pages его не увидит). В деплойной сборке `pnpm --filter @case-sim/web build:deploy` (`--strict`) незакрытые токены считаются ошибкой, обычный `pnpm build` локально деградирует до `'self'`. Ручное редактирование CSP не требуется; точный список `frame-ancestors`/origin-ов всё равно проверить на реальных клиентах (Q-16).
+- `wrangler.toml` задаёт `pages_build_output_dir = "apps/web/dist"` и build-команду с явной установкой pnpm.
 - `index.html`: `<script src="https://telegram.org/js/telegram-web-app.js?64"></script>` **в `<head>` до остальных скриптов**.
 - **Вебхук бота** ставится командой `pnpm bot:webhook:set` ([`infra/scripts/set-webhook.mjs`](../infra/scripts/set-webhook.mjs)): читает `.env`, передаёт `secret_token` и `allowed_updates`, поддерживает `TELEGRAM_USE_TEST_ENV=true` (`/test/setWebhook`). Проверка — `pnpm bot:webhook:info`, снятие — `pnpm bot:webhook:delete`. URL обязан заканчиваться на `/telegram/webhook`.
 - Для скачиваний: `Content-Disposition: attachment` + `Access-Control-Allow-Origin: https://web.telegram.org`.

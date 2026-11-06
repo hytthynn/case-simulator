@@ -7,6 +7,7 @@
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "node ../../infra/scripts/copy-headers.mjs && vite build",
+    "build:deploy": "node ../../infra/scripts/copy-headers.mjs --strict && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "lint": "tsc --noEmit -p tsconfig.json",

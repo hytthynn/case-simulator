@@ -12,8 +12,9 @@ const envSchema = z.object({
   TELEGRAM_BOT_USERNAME: z.string().default(''),
   TELEGRAM_WEBHOOK_SECRET: z.string().default(''),
   TELEGRAM_WEBHOOK_URL: z.string().default(''),
+  // CI может передать пустую строку вместо незаданной переменной — не падаем.
   TELEGRAM_USE_TEST_ENV: z
-    .enum(['true', 'false'])
+    .string()
     .default('false')
     .transform((v) => v === 'true'),
   SUPABASE_URL: z.string().default(''),

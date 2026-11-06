@@ -56,6 +56,7 @@
 | BUG-010 | medium | economy | Прайс XTR для ~25 SKU — interim, не утверждён | **open** → Q-06 |
 | BUG-011 | low | security | `@telegram-apps/sdk` не подключён на этапе 1: используется типизированный адаптер `window.Telegram.WebApp` с `isVersionAtLeast()`. Требуется замена при появлении реального TMA-окружения | **open** → Q-01/Q-02, ADR-006 |
 | BUG-012 | low | economy | `case_drop_pool` пуст: точные веса дропа и маппинг case→item не восстановлены; `open_case` использует детерминированный fallback по редкости | **open** → Q-04/Q-12 |
+| BUG-013 | high | docs | `supabase db push` не применяет `seed.sql` → прод-БД оставалась без 14 945 предметов, 241 кейса и SKU; CSP содержал нереальные origin-ы; вебхук не ставился деплоем | **fixed** → отдельный шаг `seed_catalog=true` в `deploy.yml`, CSP-токены из `VITE_*`, `deploy:check`, `bot:webhook:set` в workflow |
 
 > ⚠️ Это **не баги кода** (код ещё не писался), а зафиксированные пробелы анализа/требований. Они переносятся в работу на этапе 0/1 и закрываются с ссылкой на коммит/документ.
 
@@ -84,7 +85,7 @@
 |---|---|
 | open | 12 |
 | in_progress | 0 |
-| fixed | 0 |
+| fixed | 1 (BUG-013) |
 | wontfix / исключено | 1 (ORIG-07) |
 
 **Блокирующие (`critical`/`high`):** нет (на этапе ТЗ). При появлении — релиз запрещён, см. [`11-testing-qa.md`](11-testing-qa.md) §6.

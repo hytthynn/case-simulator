@@ -17,6 +17,7 @@
 - **CI/CD и infra** — `ci.yml` (lint/typecheck/test/docs-lint/build/pgTAP), `docs-lint.yml`, `deploy.yml` (без секретов деплой пропускается), PR-шаблон, Railway `Dockerfile`/`railway.toml`, Cloudflare `_headers`/`wrangler.toml`, `docs-lint.mjs`, `verify-seed.mjs`, `verify-assets.mjs`, алерты.
 - **Настройка и запуск** — `README.md` → пошаговый раздел «Запуск и настройка» (demo без ключей, `.env`, Supabase, @BotFather, Railway/Cloudflare, проверка, troubleshooting). `apps/bot dev` автоматически читает корневой `.env` (`--env-file-if-exists`), `apps/web/.env.example` для `VITE_*`, `pnpm setup:check`.
 - **Скрипты** — `infra/scripts/set-webhook.mjs` (`pnpm bot:webhook:set|info|delete`: `secret_token`, `allowed_updates`, test-окружение, без вывода токена) и `infra/scripts/copy-headers.mjs` (CSP `_headers` автоматически попадает в `apps/web/dist` при сборке).
+- **Деплой (0.2.0)** — `infra/scripts/deploy-check.mjs` + `pnpm deploy:check` (preflight Q-01/Q-02: формат JWK с `kid`, HTTPS/путь вебхука, `VITE_*`, CSP, отсутствие `.env` в git). `deploy.yml` теперь полный: CI-гейт → `supabase db push` → **отдельный сид каталога** по флагу `seed_catalog=true` (`db push` сид не применяет) → сборка SPA → `wrangler pages deploy` → ожидание `production_ready` → `bot:webhook:set` → smoke. Добавлены `.dockerignore`, `pages_build_output_dir` в `wrangler.toml`, pnpm без Corepack в Dockerfile, CSP-токены `{{API_ORIGIN}}`/`{{SUPABASE_ORIGIN}}`/`{{CDN_ORIGIN}}` подставляются из `VITE_*` (в CI незакрытый токен = ошибка).
 
 ### Изменено
 - **ADR-006** — старт этапа 1 на interim-допущениях §5 `14-open-questions.md`; Q-01/Q-02/Q-03 остаются блокерами деплоя и релиза (ADR-006).
@@ -26,6 +27,7 @@
 
 ### Исправлено
 - BUG-011 — вместо `@telegram-apps/sdk` на этапе 1 используется типизированный адаптер `window.Telegram.WebApp` с `isVersionAtLeast()`; статус **open**, закрывается вместе с Q-01/Q-02.
+- BUG-013 — `supabase db push` не грузил каталог в прод (сид применяется только `db reset`); добавлен отдельный идемпотентный шаг сида по флагу `seed_catalog=true`. Заодно CSP больше не содержит нереальных origin-ов, а деплой сам устанавливает вебхук.
 
 ### Решения
 - **D-07** — interim-значения из §5 принимаются как действующие (официальные веса CS2, StatTrak 10 %, RTP 0.95–0.97, XP-кривая, старт $10, interim-прайс XTR, RU 100 %), помечены в коде как INTERIM.
